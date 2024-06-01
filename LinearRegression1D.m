@@ -37,3 +37,45 @@ function ELBO = elbo(x,y, beta_mu, beta_sd2, tau2, nu)
 end
 
 %----------------------------------------------------------------------------------------
+% CAVI
+function res = CAVI(x, y, tau2, epsilon)
+    %set up
+    n = length(y);
+    sum_x2 = sum(x.^2);
+    sum_y2 = sum(y.^2);
+    sum_xy = sum(x.*y);
+
+    beta_mu = sum_yx / (sum_x2 + 1 / tau2);
+
+    %base case
+    list_beta_sd2 = beta_sd2;
+    list_nu = nu;
+    ELBO = elbo(x,y, beta_mu, beta_sd2, tau2, nu);
+    list_ELBO = ELBO;
+
+    %conditions of convergence
+    i = 1;
+    while (ELBO >= epsilon)
+        %get previous data
+        beta_sd2_old = list_beta_sd2(i);
+
+        %update beta_sd2 and nu
+        E_qA = sum_y2 - 2 * sum_xy * beta_mu + (beta_sd2_old^2 + beta_mu^2) *(sum_x2 + 1 / tau2);
+        beta_sd2_new = sqrt(((n + 1) / E_qA) / (sum_x2 + 1 / tau2));
+        nu_new = 1 / 2 * E_qA;
+
+        %calculate new ELBO
+        ELBO_new = elbo(x,y,beta_sd2_new,tau2,nu_new);
+
+        %update result lists
+        list_beta_sd2 = [list_beta_sd2 beta_sd2_new];
+        list_nu = [list_nu nu_new];
+        list_ELBO = [list_ELBO ELBO_new];
+
+        %update index
+        i = i+1;
+    end
+    res = ["beta_mu" beta_mu; "beta_sd2" list_beta_sd2; "nu" list_nu; "ELBO" list_ELBO];
+end
+
+%----------------------------------------------------------------------------------------
