@@ -105,30 +105,30 @@ function ELBO = elbo(x, y, beta_mu, beta_sd2, nu, tau2, z)
     %Monte Carlo Integration
     num_samples = 1e5;
     sigma2_samples = exprnd(1, num_samples, 1);
-    %sigma2_samples = max(sigma2_samples, 1e-6);
-    %sigma2_samples = min(sigma2_samples, 1e10);
+    sigma2_samples = max(sigma2_samples, 1e-6);
+    sigma2_samples = min(sigma2_samples, 1e10);
     % Evaluate the integrand at the sampled points
     q_sig = nu^((n+1)/2)/gamma((n+1)/2).*sigma2_samples.^(-(n+1)/2-1).*exp(-nu./sigma2_samples);
     q_sig = min(max(q_sig, 1e-6), 1e6);
 
     E_q_sigma2_val = log(q_sig).*q_sig;
-    %E_q_sigma2_val = E_q_sigma2_val(~isnan(E_q_sigma2_val));
-    E_q_log_val = q_sig.*log(sigma2_samples)./sigma2_samples;
+    E_q_sigma2_val = E_q_sigma2_val(~isnan(E_q_sigma2_val));
+    %E_q_log_val = q_sig.*log(sigma2_samples)./sigma2_samples;
     %E_q_log_val = E_q_log_val(~isnan(E_q_log_val));
-    E_log_sigma2_val = log(sigma2_samples).*q_sig;
+    %E_log_sigma2_val = log(sigma2_samples).*q_sig;
     %E_log_sigma2_val = E_log_sigma2_val(~isnan(E_log_sigma2_val));
     % Compute the average value of the integrand
     E_q_sigma2 = mean(E_q_sigma2_val);
     %disp(E_q_sigma2);
-    E_q_log = mean(E_q_log_val);
+    %E_q_log = mean(E_q_log_val);
     %disp(E_q_log);
-    E_log_sigma2 = mean(E_log_sigma2_val);
+    %E_log_sigma2 = mean(E_log_sigma2_val);
     %disp(E_log_sigma2);
 
-    %E_q_log = integral(@(sigma2) gampdf(1./sigma2,(n+1)/2,1/nu).*log(sigma2)./sigma2,0,Inf);
+    E_q_log = integral(@(sigma2) gampdf(1./sigma2,(n+1)/2,1/nu).*log(sigma2)./sigma2,0,Inf);
     E_p_y = n*log(2*pi)/4 *(sum_y2 - 2*beta_mu*sum_xy + (beta_sd2 + beta_mu^2)*sum_x2)*E_q_log;
     %disp(E_p_y);
-    %E_log_sigma2 = integral(@(sigma2) log(sigma2).*gampdf(1./sigma2,(n+1)/2,1/nu),0,Inf);
+    E_log_sigma2 = integral(@(sigma2) log(sigma2).*gampdf(1./sigma2,(n+1)/2,1/nu),0,Inf);
     %E_q_sigma2 = integral(@(sigma2) log(gampdf(1./sigma2,(n+1)/2,1/nu)).*gampdf(1./sigma2,(n+1)/2,1/nu),0,Inf);
     
     E_inv_sigma2 = (n+1)/(sum_y2-2*beta_mu*sum_xy+(beta_sd2+beta_mu^2)*(sum_x2+1/tau2));
