@@ -70,7 +70,7 @@ beta_y = normpdf(beta_x, mean(beta_samples), std(beta_samples));
 beta_elbo = normpdf(beta_x, b_m, sqrt(b_sd));
 plot(beta_x, beta_y, 'b', 'LineWidth', 2);
 plot(beta_x, beta_elbo, 'r','LineWidth', 2);
-legend('MCMC samples', 'Theoretical distribution','Distribution by ELBO');
+legend('MCMC samples', 'Theoretical distribution','Distribution by VI');
 hold off;
 
 subplot(2,1,2);
@@ -84,7 +84,7 @@ sigma2_y = normpdf(sigma2_x, mean(sigma2_samples), std(sigma2_samples));
 sigma2_elbo = gampdf(1./sigma2_x, (n+1)/2, 1/sig_n)./(sigma2_x.^2);
 plot(sigma2_x, sigma2_y, 'b', 'LineWidth', 2);
 plot(sigma2_x, sigma2_elbo, 'r', 'LineWidth', 2);
-legend('MCMC samples', 'Theoretical distribution', 'Distribution by ELBO');
+legend('MCMC samples', 'Theoretical distribution', 'Distribution by VI');
 hold off;
 
 %-----------------------------------------------------------------------------------
