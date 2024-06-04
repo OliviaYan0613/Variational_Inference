@@ -5,8 +5,8 @@ clear global;
 % Generate synthetic data
 rng(6); % For reproducibility
 n = 1e3;
-%x = linspace(0, 100, n)';
-x = 10*randn(n,1);
+x = linspace(0, 100, n)';
+%x = 10*randn(n,1);
 true_slope = 3;
 %true_intercept = 0;
 true_sigma = 1;
@@ -40,12 +40,13 @@ sigma2_current = 1;
 for i = 1:(num_samples + burn_in)
     % Sample sigma^2 given beta and y
     alpha_post = (n / 2) + 0.5;
-    beta_post = 0.5 * sum((y - beta_current * x).^2);
+    beta_post = 1+0.5 * sum((y - beta_current * x).^2);
     sigma2_current = 1 / gamrnd(alpha_post, 1 / beta_post);
     
     % Sample beta given sigma^2 and y
-    var_beta_post = 1 / (sum(x.^2) / sigma2_current + 1 / (tau2 * sigma2_current));
-    mean_beta_post = var_beta_post * (sum(x .* y) / sigma2_current);
+    %var_beta_post = 1 / (sum(x.^2) / sigma2_current + 1 / (tau2 * sigma2_current));
+    var_beta_post = 1./(1./tau2 + (1./sigma2_current) .* sum(x.^2));
+    mean_beta_post = var_beta_post * (1/tau2 .* beta_samples(1) + sum(x .* y) / sigma2_current);
     beta_current = normrnd(mean_beta_post, sqrt(var_beta_post));
     
     % Store samples after burn-in
