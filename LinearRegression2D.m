@@ -7,7 +7,7 @@ rng(6); % For reproducibility
 n = 1e4;
 x = 100*randn(n,2);
 %disp(x);
-true_slope = [2;1];
+true_slope = [1;1];
 %true_intercept = 0;
 noise = 1;
 rng(8);
@@ -15,7 +15,7 @@ y = x * true_slope + noise * randn(n, 1);
 
 beta_pr_mu = [0; 0];
 %beta_pr_sigma2 = [0.01 0; 0 0.01];
-beta_pr_sigma2 = [0.01; 0.01]; % the first entry is sigma11 and the second entry is sigma22, sigma12 = sigma21 = 0
+beta_pr_sigma2 = [0.1; 0.1]; % the first entry is sigma11 and the second entry is sigma22, sigma12 = sigma21 = 0
 
 %beta_mu = [3;1];
 %beta_sigma2 = [0.1;0.1];
@@ -26,7 +26,7 @@ disp(res);
 
 %-----------------------------------------------------------------------------------------------
 % Exact posterior
-sig_pr = [0.01 0; 0 0.01];
+sig_pr = [0.1 0; 0 0.1];
 mu_pr = [0;0];
 sig_post = inv(inv(sig_pr) + x'*x/noise);
 mu_post = (mu_pr'/sig_pr+y'*x/noise)/(inv(sig_pr)+x'*x/noise);
@@ -39,8 +39,8 @@ mu = res{1};
 sig = [res{2}(1) 0; 0 res{2}(2)];
 
 % Generate grid of x and y values
-x = linspace(1.995, 2.005, 100);
-y = linspace(0.995, 1.005, 100);
+x = linspace(true_slope(1)-1e-2, true_slope(1)+1e-2, 100);
+y = linspace(true_slope(2)-1e-2,true_slope(2)+1e-2, 100);
 [X, Y] = meshgrid(x, y);
 XY = [X(:), Y(:)];
 
