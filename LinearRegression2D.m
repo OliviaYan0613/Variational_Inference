@@ -41,8 +41,8 @@ mu = res{1};
 sig = [res{2}(1) 0; 0 res{2}(2)];
 
 % Generate grid of x and y values
-x = linspace(true_slope(1)-1e-2, true_slope(1)+1e-2, 100);
-y = linspace(true_slope(2)-1e-2,true_slope(2)+1e-2, 100);
+x = linspace(true_slope(1)-1e-2, true_slope(1)+1e-2, 1000);
+y = linspace(true_slope(2)-1e-2,true_slope(2)+1e-2, 1000);
 [X, Y] = meshgrid(x, y);
 XY = [X(:), Y(:)];
 
