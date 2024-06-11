@@ -4,17 +4,17 @@ clear global;
 
 % Generate synthetic data
 rng(6); % For reproducibility
-n = 1e4;
-x = 100*randn(n,2);
+n = 100;
+x = randn(n,2);
 %disp(x);
-true_slope = [2;3];
+true_slope = [3;10];
 %true_intercept = 0;
-noise = 1;
+noise = 0.1;
 rng(8);
 y = x * true_slope + noise * randn(n, 1);
 
-beta_pr_mu = [0; 0];
-beta_pr_sigma2_mx = [0.01 0; 0 0.01];
+beta_pr_mu = [1; 2];
+beta_pr_sigma2_mx = [1 0; 0 1];
 beta_pr_sigma2 = [beta_pr_sigma2_mx(1,1); beta_pr_sigma2_mx(2,2)];
 %beta_pr_sigma2 = [0.01; 0.01]; % the first entry is sigma11 and the second entry is sigma22, sigma12 = sigma21 = 0
 
@@ -41,8 +41,8 @@ mu = res{1};
 sig = [res{2}(1) 0; 0 res{2}(2)];
 
 % Generate grid of x and y values
-x = linspace(true_slope(1)-1e-2, true_slope(1)+1e-2, 1000);
-y = linspace(true_slope(2)-1e-2,true_slope(2)+1e-2, 1000);
+x = linspace(true_slope(1)-1, true_slope(1)+1, 10000);
+y = linspace(true_slope(2)-1, true_slope(2)+1, 10000);
 [X, Y] = meshgrid(x, y);
 XY = [X(:), Y(:)];
 
@@ -51,6 +51,19 @@ pdf_values_ext = mvnpdf(XY, mu_post, sig_post);
 pdf_values_ELBO = mvnpdf(XY, mu, sig);
 pdf_values_ext = reshape(pdf_values_ext, size(X));
 pdf_values_ELBO = reshape(pdf_values_ELBO, size(X));
+
+% Plot the 2D normal distribution
+figure;
+surf(x, y, pdf_values_ext);
+hold on;
+surf(x, y, pdf_values_ELBO);
+xlabel('\beta_1');
+ylabel('\beta_2');
+zlabel('Probability Density');
+title('2D Normal Distribution');
+shading interp;  % Smooth the surface for better visualization
+colorbar;  % Add color bar to indicate the density values
+hold off;
 
 % Plot the Gaussian distribution as a contour plot
 figure;
