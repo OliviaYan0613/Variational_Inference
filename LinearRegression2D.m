@@ -4,9 +4,13 @@ clear global;
 
 % Generate synthetic data
 rng(6); % For reproducibility
-n = 100;
-x = randn(n,2);
+n = 10;
+%x = randn(n,2);
 %disp(x);
+x1 = randn(n,1);
+rng(3)
+x2 = x1 + randn(n,1);
+x = [x1 x2];
 true_slope = [3;10];
 %true_intercept = 0;
 noise = 0.1;
@@ -41,8 +45,8 @@ mu = res{1};
 sig = [res{2}(1) 0; 0 res{2}(2)];
 
 % Generate grid of x and y values
-x = linspace(true_slope(1)-1, true_slope(1)+1, 10000);
-y = linspace(true_slope(2)-1, true_slope(2)+1, 10000);
+x = linspace(2, 12, 1000);
+y = linspace(5, 15, 1000);
 [X, Y] = meshgrid(x, y);
 XY = [X(:), Y(:)];
 
@@ -53,17 +57,17 @@ pdf_values_ext = reshape(pdf_values_ext, size(X));
 pdf_values_ELBO = reshape(pdf_values_ELBO, size(X));
 
 % Plot the 2D normal distribution
-figure;
-surf(x, y, pdf_values_ext);
-hold on;
-surf(x, y, pdf_values_ELBO);
-xlabel('\beta_1');
-ylabel('\beta_2');
-zlabel('Probability Density');
-title('2D Normal Distribution');
-shading interp;  % Smooth the surface for better visualization
-colorbar;  % Add color bar to indicate the density values
-hold off;
+%figure;
+%surf(x, y, pdf_values_ext);
+%hold on;
+%surf(x, y, pdf_values_ELBO);
+%xlabel('\beta_1');
+%ylabel('\beta_2');
+%zlabel('Probability Density');
+%title('2D Normal Distribution');
+%shading interp;  % Smooth the surface for better visualization
+%colorbar;  % Add color bar to indicate the density values
+%hold off;
 
 % Plot the Gaussian distribution as a contour plot
 figure;
@@ -135,11 +139,11 @@ function res = CAVI(x, y, beta_pr_mu, beta_pr_sigma2, noise)
         end
     end
 
-    figure;
-    elbo_x = 1:length(list_ELBO);
-    plot(elbo_x,list_ELBO, 'b', 'LineWidth', 2);
-    title('ELBO');
-    xlabel('iterations');
+    %figure;
+    %elbo_x = 1:length(list_ELBO);
+    %plot(elbo_x,list_ELBO, 'b', 'LineWidth', 2);
+    %title('ELBO');
+    %xlabel('iterations');
     %hold on;
 
     res = {beta_mu_new; 1./beta_sigma2; ELBO_new; k};
