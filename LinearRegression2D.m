@@ -3,22 +3,22 @@ close all;
 clear global;
 
 % Generate synthetic data
-rng(6); % For reproducibility
+rng(123); % For reproducibility
 n = 10;
 %x = randn(n,2);
 %disp(x);
 x1 = randn(n,1);
-rng(3)
+rng(234)
 x2 = x1 + randn(n,1);
 x = [x1 x2];
-true_slope = [3;10];
+true_slope = [3;3];
 %true_intercept = 0;
 noise = 0.1;
-rng(8);
+rng(345);
 y = x * true_slope + noise * randn(n, 1);
 
 beta_pr_mu = [1; 2];
-beta_pr_sigma2_mx = [1 0; 0 1];
+beta_pr_sigma2_mx = [5 0; 0 5];
 beta_pr_sigma2 = [beta_pr_sigma2_mx(1,1); beta_pr_sigma2_mx(2,2)];
 %beta_pr_sigma2 = [0.01; 0.01]; % the first entry is sigma11 and the second entry is sigma22, sigma12 = sigma21 = 0
 
@@ -45,8 +45,8 @@ mu = res{1};
 sig = [res{2}(1) 0; 0 res{2}(2)];
 
 % Generate grid of x and y values
-x = linspace(2, 12, 1000);
-y = linspace(5, 15, 1000);
+x = linspace(true_slope(1)-3,true_slope(1)+3, 1000);
+y = linspace(true_slope(2)-3, true_slope(2)+3, 1000);
 [X, Y] = meshgrid(x, y);
 XY = [X(:), Y(:)];
 
