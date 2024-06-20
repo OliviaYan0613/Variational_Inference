@@ -18,7 +18,7 @@ rng(345);
 y = x * true_slope + noise * randn(n, 1);
 
 beta_pr_mu = [1; 2];
-beta_pr_sigma2_mx = [5 0; 0 5];
+beta_pr_sigma2_mx = inv([5 0; 0 5]);
 beta_pr_sigma2 = [beta_pr_sigma2_mx(1,1); beta_pr_sigma2_mx(2,2)];
 %beta_pr_sigma2 = [0.01; 0.01]; % the first entry is sigma11 and the second entry is sigma22, sigma12 = sigma21 = 0
 
@@ -34,7 +34,7 @@ disp(res);
 %sig_pr = [beta_pr_sigma2(1) 0; 0 beta_pr_sigma2(2)];
 sig_pr = beta_pr_sigma2_mx;
 mu_pr = beta_pr_mu;
-sig_post = inv(inv(sig_pr) + x'*x/noise);
+sig_post = inv(sig_pr + x'*x/noise);
 mu_post = (mu_pr'/sig_pr+y'*x/noise)/(inv(sig_pr)+x'*x/noise);
 
 %------------------------------------------------------------------------------------------------------------
