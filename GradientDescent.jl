@@ -1,6 +1,9 @@
-using Printf, ForwardDiff, Distributions, Random, LinearAlgebra, Plots
+using Printf, ForwardDiff, Distributions, Random, LinearAlgebra, Plots, Flux
 
 Random.seed!(123);
+
+SteepestDescent(z0, 0.01);
+#SteepestDescentArmijo(z0, 1e-3);
 
 # setup
 beta_true =  [1.0 2.0]';
@@ -12,9 +15,9 @@ tol = 1e-4;
 
 mu_pr = [2.0 2.0]';
 #mu_pr = 1
-sigma2_pr = [1.0 0.0; 0.0 5.0];
+sigma2_pr = [1.0 0.0; 0.0 2.0];
 #sigma2_pr = 1
-noise = 0.1;
+noise = 0.01;
 
 sigma2_pr_diag = [1.0 2.0]';
 #sigma2_pr_diag = 1;
@@ -67,12 +70,20 @@ function ELBO(z)
     sigma2_vec = z[length(mu_pr)+1:length(z)]
     N = 100
     beta = sampling(q_b, N, mu_vec, sigma2_vec);
+    mean_beta = mean(beta)
+    log_p_y = 0
+    log_p_b = 0
+    log_q_b = 0
     for i = 1:length(beta)
         b = beta[i]
-        val = log(p_y(b)[1]*p_b(b)[1])-log(q_b(b,mu_vec,sigma2_vec)[1])
-        res = res + val/N
+        log_p_y = log_p_y + log(p_y(mean_beta)[1])
+        log_p_b = log_p_b + log(p_b(b)[1])
+        log_q_b = log_q_b + log(q_b(b,mu_vec,sigma2_vec)[1])
+        #val = log(p_y(b)[1]*p_b(b)[1])-log(q_b(b,mu_vec,sigma2_vec)[1])
+        #res = res + val/N
         #display(res)
     end
+    res = (log_p_y + log_p_b - log_q_b)/length(beta)
     return res
 end
  
@@ -83,6 +94,7 @@ end
 
 function G_ELBO(z) 
     diff = ForwardDiff.gradient(neg_ELBO, z)
+    #diff  = gradient(neg_ELBO, z)
     return diff
 end
 
@@ -108,7 +120,7 @@ function SteepestDescent(z0,alpha)
             # plot
                 # Contour plot
                 # Mean and covariance matrix for the Gaussian distribution
-                mu_post = vcat(z[1:length(mu_pr)]);
+                mu_post = vec(z[1:length(mu_pr)]);
                 sigma2_post = z[length(mu_pr)+1:length(z)];
                 Sigma2 = diagm(sigma2_post);
                 # Create a grid of x and y values
@@ -130,15 +142,16 @@ function SteepestDescent(z0,alpha)
         #end
         z[1:length(mu_pr)] = z[1:length(mu_pr)] - alpha*Fgrad[1:length(mu_pr)]
         for k = length(mu_pr)+1:length(z)
-            z_try = z[k] - alpha*Fgrad[k]
+            z_try = z[k] - 0.1*alpha*Fgrad[k]
             if (z_try > 1e-6)
                 z[k] = z_try
             end
+            #z[k] = max(z_try,1e-6)
         end
         Fval_old = Fval;
  
         # print how we're doing, every 10 iterations
-        if (iter%100==0)
+        if (iter%10==0)
           #@printf("iter: %d, alpha: %f, %f\t, %f\t, %f\n", iter, alpha, z[1:length(mu)], z[length(mu)+1:length(z)], Fval[1])
           @printf("iter: %d, alpha: %f, %f\n", iter, alpha, -Fval[1])
           display(z')
