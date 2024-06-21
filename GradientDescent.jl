@@ -2,8 +2,7 @@ using Printf, ForwardDiff, Distributions, Random, LinearAlgebra, Plots, Flux
 
 Random.seed!(123);
 
-SteepestDescent(z0, 0.01);
-#SteepestDescentArmijo(z0, 1e-3);
+
 
 # setup
 beta_true =  [1.0 2.0]';
@@ -242,3 +241,5 @@ function SteepestDescentArmijo(z0, c1)
     return z';
 end
 
+SteepestDescent(z0, 0.01);
+#SteepestDescentArmijo(z0, 1e-3);
