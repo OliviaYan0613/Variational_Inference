@@ -5,20 +5,20 @@ clear global;
 % Generate synthetic data
 rng(123); % For reproducibility
 n = 10;
-%x = randn(n,2);
+x = randn(n,2);
 %disp(x);
-x1 = randn(n,1);
-rng(234)
-x2 = x1 + randn(n,1);
-x = [x1 x2];
-true_slope = [3;3];
+%x1 = randn(n,1);
+%rng(234)
+%x2 = x1 + randn(n,1);
+%x = [x1 x2];
+true_slope = [2;3];
 %true_intercept = 0;
 noise = 0.1;
 rng(345);
-y = x * true_slope + noise * randn(n, 1);
+y = x * true_slope + sqrt(noise) * randn(n, 1);
 
 beta_pr_mu = [1; 2];
-beta_pr_sigma2_mx = inv([5 0; 0 5]);
+beta_pr_sigma2_mx = inv([1 0; 0 1]);
 beta_pr_sigma2 = [beta_pr_sigma2_mx(1,1); beta_pr_sigma2_mx(2,2)];
 %beta_pr_sigma2 = [0.01; 0.01]; % the first entry is sigma11 and the second entry is sigma22, sigma12 = sigma21 = 0
 
@@ -106,26 +106,26 @@ function res = CAVI(x, y, beta_pr_mu, beta_pr_sigma2, noise)
     epsilon = 1e-5;
 
     %base case
-    beta_mu_old = [0;0];
-    beta_sigma2_old = [1;1];
+    beta_mu_old = [1;1];
+    beta_sigma2_old = [0.1;0.1];
     ELBO_old = 0;
     ELBO_new = elbo(x, y, beta_mu_old, beta_sigma2_old, beta_pr_mu, beta_pr_sigma2, noise);
-    list_ELBO = [ELBO_old];
+    %list_ELBO = [ELBO_old];
 
     %beta_sigma2 (does not change during updating)
     beta_sigma2(1) = sum(x1.^2)/noise+beta_pr_sigma2(1);
     beta_sigma2(2) = sum(x2.^2)/noise+beta_pr_sigma2(2);
 
     for i = 1:100
-        if (abs(ELBO_old - ELBO_new) >= epsilon)
+        %if (abs(ELBO_old - ELBO_new) >= epsilon)
 
         ELBO_old = ELBO_new;
-        list_ELBO = [list_ELBO ELBO_new];
+        %list_ELBO = [list_ELBO ELBO_new];
 
         %update beta_mu
-        beta_mu_new(1) = (sum(y.*x1)/noise-sum(x1.*x2)*beta_mu_old(1)+beta_pr_mu(1)*beta_pr_sigma2(1))...
+        beta_mu_new(1) = (sum(y.*x1)/noise-sum(x1.*x2)*beta_mu_old(2)/noise+beta_pr_mu(1)*beta_pr_sigma2(1))...
             /beta_sigma2(1);
-        beta_mu_new(2) = (sum(y.*x2)/noise-sum(x1.*x2)*beta_mu_old(2)+beta_pr_mu(2)*beta_pr_sigma2(2))...
+        beta_mu_new(2) = (sum(y.*x2)/noise-sum(x1.*x2)*beta_mu_old(1)/noise+beta_pr_mu(2)*beta_pr_sigma2(2))...
             /beta_sigma2(2);
             
         %save beta_mu
@@ -136,7 +136,7 @@ function res = CAVI(x, y, beta_pr_mu, beta_pr_sigma2, noise)
         ELBO_new = elbo(x, y, beta_mu_old, beta_sigma2_old, beta_pr_mu, beta_pr_sigma2, noise);
         %disp(ELBO_new);
         k = i;
-        end
+        %end
     end
 
     %figure;
