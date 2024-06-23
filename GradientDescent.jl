@@ -24,25 +24,26 @@ z0 = [mu_pr; sigma2_pr_diag];
 
 x = randn(n,2);
 #x = randn(n);
-y = x*beta_true + noise*randn(n);
+y = x*beta_true + sqrt(noise)*randn(n);
 
 # prior
 # p(y|beta)
 function p_y(beta)
-    prob = exp(-0.5*(y - x*beta)'*(y - x*beta)/noise)
+    prob = exp(-0.5*(y - x*beta)'*(y - x*beta)/noise)/(2*pi*sqrt(noise))
+    #prob = pdf(Normal(mu_post, Sigma2), [xi, yi])
     prob = max(prob[1],1e-200)
     return prob
 end
 # p(beta)
 function p_b(beta)
-    prob = exp(-0.5*(beta - mu_pr)'*inv(sigma2_pr)*(beta - mu_pr))/(2*pi)/sqrt(norm(sigma2_pr))
+    prob = exp(-0.5*(beta - mu_pr)'*inv(sigma2_pr)*(beta - mu_pr))/sqrt((2*pi)^2*norm(sigma2_pr))
     #prob = max(prob[1],1e-200)
     return prob
 end
 # q(beta)
 function q_b(beta,mu,sigma2)
     sigma2_mx = [sigma2[1] 0; 0 sigma2[2]]
-    prob = exp(- 0.5*(beta - mu)'*inv(sigma2_mx)*(beta - mu))/(2*pi)/sqrt(norm(sigma2_mx))
+    prob = exp(- 0.5*(beta - mu)'*inv(sigma2_mx)*(beta - mu))/sqrt((2*pi)^2*norm(sigma2_mx))
     #prob = max(prob[1],1e-200)
     return prob
 end

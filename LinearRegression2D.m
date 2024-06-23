@@ -5,12 +5,12 @@ clear global;
 % Generate synthetic data
 rng(123); % For reproducibility
 n = 10;
-x = randn(n,2);
+%x = randn(n,2);
 %disp(x);
-%x1 = randn(n,1);
-%rng(234)
-%x2 = x1 + randn(n,1);
-%x = [x1 x2];
+x1 = randn(n,1);
+rng(234)
+x2 = x1 + 0.1*randn(n,1);
+x = [x1 x2];
 true_slope = [2;3];
 %true_intercept = 0;
 noise = 0.1;
@@ -71,9 +71,9 @@ pdf_values_ELBO = reshape(pdf_values_ELBO, size(X));
 
 % Plot the Gaussian distribution as a contour plot
 figure;
-contour(X, Y, pdf_values_ext, 20, 'DisplayName', 'Exact'); % Adjust the number of contour levels as needed
+contour(X, Y, pdf_values_ext, 10, 'DisplayName', 'Exact'); % Adjust the number of contour levels as needed
 hold on;
-contour(X, Y, pdf_values_ELBO, 20, '--','DisplayName', 'VI'); 
+contour(X, Y, pdf_values_ELBO, 10, '--','DisplayName', 'VI'); 
 title('2D Gaussian Distribution (Contour Plot)');
 xlabel('\beta_1');
 ylabel('\beta_2');
