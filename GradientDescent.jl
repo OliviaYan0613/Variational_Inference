@@ -1,82 +1,91 @@
 using Printf, ForwardDiff, Distributions, Random, LinearAlgebra, Plots, Flux
 
-Random.seed!(123);
-
-
+#Random.seed!(123);
 
 # setup
-beta_true =  [1.0 2.0]';
+beta_true =  [10.0 3.0]';
 #beta_true = 3
 n = 10;
 
-MaxIter = 1000;
+MaxIter = 10000;
 tol = 1e-4; 
 
-mu_pr = [2.0 2.0]';
+mu_pr = [1.0 1.0]';
 #mu_pr = 1
-sigma2_pr = [1.0 0.0; 0.0 2.0];
+sigma2_pr = [10.0 0.0; 0.0 3.0];
 #sigma2_pr = 1
 noise = 0.01;
 
-sigma2_pr_diag = [1.0 2.0]';
+sigma2_pr_diag = [sigma2_pr[1,1] sigma2_pr[2,2]]';
 #sigma2_pr_diag = 1;
 z0 = [mu_pr; sigma2_pr_diag];
 
 x = randn(n,2);
 #x = randn(n);
+#Random.seed!(197)
 y = x*beta_true + sqrt(noise)*randn(n);
 
 # prior
 # p(y|beta)
 function p_y(beta)
-    prob = exp(-0.5*(y - x*beta)'*(y - x*beta)/noise)/(2*pi*sqrt(noise))
-    #prob = pdf(Normal(mu_post, Sigma2), [xi, yi])
+    #prob = exp(-0.5*(y - x*beta)'*(y - x*beta)/noise)/(2*pi*sqrt(noise))
+    prob = exp(-0.5*((y - x*beta)'*(y - x*beta))[1]/noise)/(2*pi*sqrt(noise))^length(y)
+    #prob = pdf(Normal(x*beta, noise), y)
     prob = max(prob[1],1e-200)
     return prob
 end
 # p(beta)
 function p_b(beta)
-    prob = exp(-0.5*(beta - mu_pr)'*inv(sigma2_pr)*(beta - mu_pr))/sqrt((2*pi)^2*norm(sigma2_pr))
+    #prob = exp(-0.5*(beta - mu_pr)'*inv(sigma2_pr)*(beta - mu_pr))/sqrt((2*pi)^2*norm(sigma2_pr))
+    #prob = exp(-0.5*(beta - mu_pr)'*inv(sigma2_pr)*(beta - mu_pr))
+    prob = pdf(MvNormal(vec(mu_pr), sigma2_pr), beta)
     #prob = max(prob[1],1e-200)
     return prob
 end
 # q(beta)
 function q_b(beta,mu,sigma2)
     sigma2_mx = [sigma2[1] 0; 0 sigma2[2]]
-    prob = exp(- 0.5*(beta - mu)'*inv(sigma2_mx)*(beta - mu))/sqrt((2*pi)^2*norm(sigma2_mx))
+    #prob = exp(- 0.5*(beta - mu)'*inv(sigma2_mx)*(beta - mu))/sqrt((2*pi)^2*norm(sigma2_mx))
+    #prob = exp(- 0.5*(beta - mu)'*inv(sigma2_mx)*(beta - mu))
+    prob = pdf(MvNormal(vec(mu), sigma2_mx), beta)
     #prob = max(prob[1],1e-200)
     return prob
 end
 
 # define loss function
 # MC sampling
-function sampling(pdf, N, mu, sigma2; b_min=-10, b_max=10)
-    samples = []
-    while length(samples) < N
-        b1 = rand() * (b_max - b_min) + b_min        
-        b2 = rand() * (b_max - b_min) + b_min
-        b = [b1; b2]
-        y = rand()        # Sample y uniformly within [0, 1]
-        if y <= pdf(b, mu, sigma2)[1]
-            push!(samples, b)
-        end
-    end
-    return samples
-end
+#function sampling(pdf, N, mu, sigma2; b_min=-10, b_max=10)
+#    samples = []
+#    while length(samples) < N
+#        #Random.seed!(873)
+#        b1 = rand() * (b_max - b_min) + b_min        
+#        #Random.seed!(745)
+#        b2 = rand() * (b_max - b_min) + b_min
+#        #Random.seed!(134)
+#        b = [b1; b2]
+#        y = rand()        # Sample y uniformly within [0, 1]
+#        if y <= pdf(b, mu, sigma2)[1]
+#            push!(samples, b)
+#        end
+#    end
+#    return samples
+#end
 
 function ELBO(z)
     res = 0
-    mu_vec = z[1:length(mu_pr)]
+    mu_vec = vec(z[1:length(mu_pr)])
     sigma2_vec = z[length(mu_pr)+1:length(z)]
+    sigma2_mx = [sigma2_vec[1] 0; 0 sigma2_vec[2]]
     N = 100
-    beta = sampling(q_b, N, mu_vec, sigma2_vec);
-    mean_beta = mean(beta)
+    #beta = sampling(q_b, N, mu_vec, sigma2_vec);
+    beta = rand(MvNormal(mu_vec, sigma2_mx), N)
+    #mean_beta = mean(beta)
     log_p_y = 0
     log_p_b = 0
     log_q_b = 0
-    for i = 1:length(beta)
-        b = beta[i]
-        log_p_y = log_p_y + log(p_y(mean_beta)[1])
+    for i = 1:size(beta)[2]
+        b = [beta[1, i] beta[2, i]]'
+        log_p_y = log_p_y + log(p_y(b)[1])
         log_p_b = log_p_b + log(p_b(b)[1])
         log_q_b = log_q_b + log(q_b(b,mu_vec,sigma2_vec)[1])
         #val = log(p_y(b)[1]*p_b(b)[1])-log(q_b(b,mu_vec,sigma2_vec)[1])
@@ -103,19 +112,19 @@ function SteepestDescent(z0,alpha)
     # setup for steepest descent
     z = z0;
     successflag = false;
-    Fval_old = 0;
+    #Fval_old = 0;
     #mu_iter = [];
     #sigma2_iter = [];
  
     # perform steepest descent iterations
     for iter = 1:MaxIter
-        Fval = neg_ELBO(z);
+        Fval = ELBO(z);
         Fgrad = G_ELBO(z);
         #push!(mu_iter,z[1:length(mu_pr)]);
         #push!(sigma2_iter,z[length(mu_iter)+1:length(z)]);
         if sqrt(Fgrad'*Fgrad)[1] < tol
         #if abs(Fval - Fval_old) < tol
-            @printf("Converged after %d iterations, function value %f\n", iter, -Fval)
+            @printf("Converged after %d iterations, function value %f\n", iter, Fval)
             successflag = true;
             # plot
                 # Contour plot
@@ -142,18 +151,18 @@ function SteepestDescent(z0,alpha)
         #end
         z[1:length(mu_pr)] = z[1:length(mu_pr)] - alpha*Fgrad[1:length(mu_pr)]
         for k = length(mu_pr)+1:length(z)
-            z_try = z[k] - 0.1*alpha*Fgrad[k]
+            z_try = z[k] - alpha*Fgrad[k]
             if (z_try > 1e-6)
                 z[k] = z_try
             end
             #z[k] = max(z_try,1e-6)
         end
-        Fval_old = Fval;
+        #Fval_old = Fval;
  
         # print how we're doing, every 10 iterations
-        if (iter%10==0)
+        if (iter%100==0)
           #@printf("iter: %d, alpha: %f, %f\t, %f\t, %f\n", iter, alpha, z[1:length(mu)], z[length(mu)+1:length(z)], Fval[1])
-          @printf("iter: %d, alpha: %f, %f\n", iter, alpha, -Fval[1])
+          @printf("iter: %d, alpha: %f, %f\n", iter, alpha, Fval[1])
           display(z')
         end
  
@@ -216,8 +225,14 @@ function SteepestDescentArmijo(z0, c1)
 
         # perform line search
         for k = 1:MaxBacktrack
-            z_try = z - alpha*Fgrad;
-            z_try[length(mu_pr)+1:length(z_try)] = z[length(mu_pr)+1:length(z_try)] - 0.1*alpha*Fgrad[length(mu_pr)+1:length(z_try)]
+            z_try = zeros(length(z))
+            z_try[1:length(mu_pr)] = z[1:length(mu_pr)] - alpha*Fgrad[1:length(mu_pr)]
+            for k = length(mu_pr)+1:length(z)
+                z_try1 = z[k] - alpha*Fgrad[k]
+                if (z_try1 > 1e-6)
+                    z_try[k] = z_try1
+                end
+            end
             Fval_try = neg_ELBO(z_try);
             if (Fval_try > Fval - c1*alpha *(Fgrad'*Fgrad)[1])
                 alpha = alpha * eta;
@@ -229,7 +244,7 @@ function SteepestDescentArmijo(z0, c1)
         end
 
         # print how we're doing, every 10 iterations
-        if (iter%10==0)
+        if (iter%100==0)
             @printf("iter: %d: alpha: %f, %f\n", iter, alpha, -Fval)
             display(z')
         end
