@@ -1,6 +1,6 @@
 using Printf, ForwardDiff, Distributions, Random, LinearAlgebra, Plots, Flux
 
-Random.seed!(123);
+Random.seed!(13);
 
 # setup
 beta_true =  [2.0 3.0]';
@@ -116,7 +116,7 @@ end
 function SteepestDescent(z0,alpha)
     # setup for steepest descent
     z = z0;
- 
+    lr = alpha;
     # perform steepest descent iterations
     for iter = 1:MaxIter
         Fval = ELBO(z);
@@ -124,13 +124,17 @@ function SteepestDescent(z0,alpha)
         
         # perform steepest descent step
         
-        z[1:length(mu_pr)] = z[1:length(mu_pr)] - alpha*Fgrad[1:length(mu_pr)]
+        #z[1:length(mu_pr)] = z[1:length(mu_pr)] - alpha*Fgrad[1:length(mu_pr)]
         z_try = zeros(3)
         for k = length(mu_pr)+1:length(z)
-            z_try[k-2] = z[k] - alpha*Fgrad[k]
+            z_try[k-2] = z[k] - 0.75*alpha*Fgrad[k]
         end
-        if (z_try[1] > 1e-6) &&(z_try[2] > 1e-6) &&(z_try[3] >=0) && (z_try[1]*z_try[2]-z_try[3]^2 > 0)
+        if (z_try[1] > 0) &&(z_try[2] > 0) && (z_try[1]*z_try[2]-z_try[3]^2 >= 0)
             z[length(mu_pr)+1:length(z)] = z_try
+            z[1:length(mu_pr)] = z[1:length(mu_pr)] - lr*Fgrad[1:length(mu_pr)]
+            lr = alpha
+        else
+            lr = 0.5*lr
         end
         #z[k] = max(z_try,1e-6)
         #Fval_old = Fval;
@@ -138,7 +142,7 @@ function SteepestDescent(z0,alpha)
         # print how we're doing, every 10 iterations
         if (iter%100==0)
           #@printf("iter: %d, alpha: %f, %f\t, %f\t, %f\n", iter, alpha, z[1:length(mu)], z[length(mu)+1:length(z)], Fval[1])
-          @printf("iter: %d, alpha: %f, %f\n", iter, alpha, Fval[1])
+          @printf("iter: %d, alpha: %f, %f\n", iter, lr, Fval[1])
           display(z')
         end
  
@@ -152,8 +156,8 @@ function SteepestDescent(z0,alpha)
         Sigma2[1, 2] = sigma2_post[3];
         Sigma2[2, 1] = sigma2_post[3]
         # Create a grid of x and y values
-        dx = range(beta_true[1]-2, stop=(beta_true[1]+2), length=100)
-        dy = range(beta_true[2]-1, stop=(beta_true[2]+1), length=100)
+        dx = range(beta_true[1]-0.5, stop=(beta_true[1]+0.5), length=100)
+        dy = range(beta_true[2]-0.5, stop=(beta_true[2]+0.5), length=100)
 
         # Evaluate the Gaussian density at each point in the grid
         Z = [pdf(MvNormal(mu_post, Sigma2), [xi, yi]) for xi in dx, yi in dy]
@@ -162,10 +166,12 @@ function SteepestDescent(z0,alpha)
         Z_theo = [pdf(MvNormal(mu_theo, sigma2_theo), [xi, yi]) for xi in dx, yi in dy]
         Z_theo = reshape(Z_theo, length(dx), length(dy))'
 
-        contour(dx, dy, Z, xlabel="beta_1", ylabel="beta_2", title="2D Gaussian Distribution Contour Map", fill=false, c=:blues, color=:blue, colorbar=true, ratio = 1.0)
+        p1 = contour(dx, dy, Z, xlabel="beta_1", ylabel="beta_2", title="2D Gaussian Distribution Contour Map", fill=false, c=:blues, color=:blue, colorbar=true, ratio = 1.0)
         savefig("GD.png")
-        contour(dx, dy, Z_theo, xlabel="beta_1", ylabel="beta_2", title="2D Gaussian Distribution Contour Map", fill=false, c=:reds, color=:red, colorbar=true, ratio = 1.0)
+        p2 = contour(dx, dy, Z_theo, xlabel="beta_1", ylabel="beta_2", title="2D Gaussian Distribution Contour Map", fill=false, c=:reds, color=:red, colorbar=true, ratio = 1.0)
         savefig("Theoredical_GD.png")
+        plot(p1, p2, layout=(1, 2), size=(1000, 400))
+        savefig("Plot1.png")
     return z';
  end
 
@@ -190,45 +196,24 @@ function SteepestDescentArmijo(z0, c1)
         #display(Fval);
         Fgrad = G_ELBO(z);
         #display(Fgrad);
-        #push!(mu_iter,z[1:length(mu_pr)]);
-        #push!(sigma2_iter,z[length(mu_iter)+1:length(z)]);
-        if sqrt(Fgrad'*Fgrad)[1] < tol
-            display(z')
-            @printf("Converged after %d iterations, function value %f\n", iter, -Fval)
-            successflag = true;
-            # plot
-                # Contour plot
-                # Mean and covariance matrix for the Gaussian distribution
-                mu_post = z[1:length(mu_pr)];
-                sigma2_post = z[length(mu_pr)+1:length(z)];
-                Sigma2 = diagm(sigma2_post);
-                # Create a grid of x and y values
-                dx = range(beta_true[1]-2, stop=(beta_true[1]+2), length=100)
-                dy = range(beta_true[2]-2, stop=(beta_true[2]+2), length=100)
-
-                # Create a grid of points
-                X = [xi for xi in dx, yi in dy]
-                Y = [yi for xi in dx, yi in dy]
-
-                # Evaluate the Gaussian density at each point in the grid
-                Z = pdf(MvNormal(mu_post, Sigma2), hcat(X[:], Y[:]))
-                Z = reshape(Z, length(x), length(y))'
-
-                contour(dx, dy, Z, xlabel="X", ylabel="Y", title="2D Gaussian Distribution Contour Map")
-                #savefig("Plot1.png")
-            break;
-        end
+        
+        #if sqrt(Fgrad'*Fgrad)[1] < tol
+        #    display(z')
+        #    @printf("Converged after %d iterations, function value %f\n", iter, -Fval)
+        #    successflag = true;
+        #    break;
+        #end
         
         # perform line search
         for k = 1:MaxBacktrack
             z_try = z
-            z_try[1:length(mu_pr)] = z[1:length(mu_pr)] - alpha*Fgrad[1:length(mu_pr)]
             z_try1 = zeros(3)
             for p = length(mu_pr)+1:length(z)
-                z_try1[p-2] = z[p] - alpha*Fgrad[p]
+                z_try1[p-2] = z[p] - 0.5*alpha*Fgrad[p]
             end
-            if (z_try1[1] > 1e-6) &&(z_try1[2] > 1e-6) &&(z_try1[3] >= 0) && (z_try1[1]*z_try1[2]-z_try1[3]^2 > 0)
+            if (z_try1[1] > 0) &&(z_try1[2] > 0) && (z_try1[1]*z_try1[2]-z_try1[3]^2 >= 0)
                 z_try[length(mu_pr)+1:length(z)] = z_try1
+                z_try[1:length(mu_pr)] = z[1:length(mu_pr)] - alpha*Fgrad[1:length(mu_pr)]
                 Fval_try = neg_ELBO(z_try);
                 if (Fval_try > Fval - c1*alpha *(Fgrad'*Fgrad)[1])
                     alpha = alpha * eta;
@@ -245,18 +230,44 @@ function SteepestDescentArmijo(z0, c1)
         end
 
         # print how we're doing, every 10 iterations
-        if (iter%100==0)
+        if (iter%10==0)
             @printf("iter: %d: alpha: %f, %f\n", iter, alpha, -Fval)
             display(z')
         end
     end
 
-    if successflag == false
-        @printf("Failed to converge after %d iterations, function value %f\n", MaxIter, ELBO(z))
-    end
+    #if successflag == false
+    #    @printf("Failed to converge after %d iterations, function value %f\n", MaxIter, ELBO(z))
+    #end
+
+    # plot
+        # Contour plot
+        # Mean and covariance matrix for the Gaussian distribution
+        mu_post = vec(z[1:length(mu_pr)]);
+        sigma2_post = z[length(mu_pr)+1:length(z)];
+        Sigma2 = diagm(sigma2_post[1:2]);
+        Sigma2[1, 2] = sigma2_post[3];
+        Sigma2[2, 1] = sigma2_post[3]
+        # Create a grid of x and y values
+        dx = range(beta_true[1]-0.5, stop=(beta_true[1]+0.5), length=100)
+        dy = range(beta_true[2]-0.5, stop=(beta_true[2]+0.5), length=100)
+
+        # Evaluate the Gaussian density at each point in the grid
+        Z = [pdf(MvNormal(mu_post, Sigma2), [xi, yi]) for xi in dx, yi in dy]
+        Z = reshape(Z, length(dx), length(dy))'
+
+        Z_theo = [pdf(MvNormal(mu_theo, sigma2_theo), [xi, yi]) for xi in dx, yi in dy]
+        Z_theo = reshape(Z_theo, length(dx), length(dy))'
+
+        p1 = contour(dx, dy, Z, xlabel="beta_1", ylabel="beta_2", title="2D Gaussian Distribution Contour Map", fill=false, c=:blues, color=:blue, colorbar=true, ratio = 1.0)
+        savefig("GD_armijo.png")
+        p2 = contour(dx, dy, Z_theo, xlabel="beta_1", ylabel="beta_2", title="2D Gaussian Distribution Contour Map", fill=false, c=:reds, color=:red, colorbar=true, ratio = 1.0)
+        savefig("Theoredical_GD.png")
+        plot(p1, p2, layout=(1, 2), size=(1000, 400))
+        savefig("Plot2.png")
 
     return z';
 end
 
-SteepestDescent(z0, 0.0005);
-#SteepestDescentArmijo(z0, 1e-3);
+#SteepestDescent(z0, 0.0005);
+SteepestDescentArmijo(z0, 1e-3);
