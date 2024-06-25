@@ -1,29 +1,34 @@
 using Printf, ForwardDiff, Distributions, Random, LinearAlgebra, Plots, Flux
 
-#Random.seed!(123);
+Random.seed!(123);
 
 # setup
-beta_true =  [10.0 3.0]';
+beta_true =  [2.0 3.0]';
 #beta_true = 3
 n = 10;
 
-MaxIter = 10000;
+MaxIter = 1000;
 tol = 1e-4; 
 
 mu_pr = [1.0 1.0]';
 #mu_pr = 1
-sigma2_pr = [10.0 0.0; 0.0 3.0];
+sigma2_pr = [2.0 1.0; 1.0 1.0];
 #sigma2_pr = 1
 noise = 0.01;
 
 sigma2_pr_diag = [sigma2_pr[1,1] sigma2_pr[2,2]]';
+sigma2_pr_anti_diag = sigma2_pr[1,2]
 #sigma2_pr_diag = 1;
-z0 = [mu_pr; sigma2_pr_diag];
+z0 = [mu_pr; sigma2_pr_diag; sigma2_pr_anti_diag];
 
 x = randn(n,2);
 #x = randn(n);
 #Random.seed!(197)
 y = x*beta_true + sqrt(noise)*randn(n);
+
+# Theoredical posterior
+sigma2_theo = inv(inv(sigma2_pr)+x'*x/noise)
+mu_theo = vec(((mu_pr'*inv(sigma2_pr)+y'*x/noise)*sigma2_theo)')
 
 # prior
 # p(y|beta)
@@ -44,7 +49,7 @@ function p_b(beta)
 end
 # q(beta)
 function q_b(beta,mu,sigma2)
-    sigma2_mx = [sigma2[1] 0; 0 sigma2[2]]
+    sigma2_mx = [sigma2[1] sigma2[3]; sigma2[3] sigma2[2]]
     #prob = exp(- 0.5*(beta - mu)'*inv(sigma2_mx)*(beta - mu))/sqrt((2*pi)^2*norm(sigma2_mx))
     #prob = exp(- 0.5*(beta - mu)'*inv(sigma2_mx)*(beta - mu))
     prob = pdf(MvNormal(vec(mu), sigma2_mx), beta)
@@ -75,7 +80,7 @@ function ELBO(z)
     res = 0
     mu_vec = vec(z[1:length(mu_pr)])
     sigma2_vec = z[length(mu_pr)+1:length(z)]
-    sigma2_mx = [sigma2_vec[1] 0; 0 sigma2_vec[2]]
+    sigma2_mx = [sigma2_vec[1] sigma2_vec[3]; sigma2_vec[3] sigma2_vec[2]]
     N = 100
     #beta = sampling(q_b, N, mu_vec, sigma2_vec);
     beta = rand(MvNormal(mu_vec, sigma2_mx), N)
@@ -111,52 +116,23 @@ end
 function SteepestDescent(z0,alpha)
     # setup for steepest descent
     z = z0;
-    successflag = false;
-    #Fval_old = 0;
-    #mu_iter = [];
-    #sigma2_iter = [];
  
     # perform steepest descent iterations
     for iter = 1:MaxIter
         Fval = ELBO(z);
         Fgrad = G_ELBO(z);
-        #push!(mu_iter,z[1:length(mu_pr)]);
-        #push!(sigma2_iter,z[length(mu_iter)+1:length(z)]);
-        if sqrt(Fgrad'*Fgrad)[1] < tol
-        #if abs(Fval - Fval_old) < tol
-            @printf("Converged after %d iterations, function value %f\n", iter, Fval)
-            successflag = true;
-            # plot
-                # Contour plot
-                # Mean and covariance matrix for the Gaussian distribution
-                mu_post = vec(z[1:length(mu_pr)]);
-                sigma2_post = z[length(mu_pr)+1:length(z)];
-                Sigma2 = diagm(sigma2_post);
-                # Create a grid of x and y values
-                dx = range(-3, stop=5, length=100)
-                dy = range(-3, stop=5, length=100)
-
-                # Evaluate the Gaussian density at each point in the grid
-                Z = [pdf(MvNormal(mu_post, Sigma2), [xi, yi]) for xi in dx, yi in dy]
-                Z = reshape(Z, length(dx), length(dy))'
-
-                contour(dx, dy, Z, xlabel="\beta_1", ylabel="\beta_2", title="2D Gaussian Distribution Contour Map", ratio = 1)
-                #savefig("Plot1.png")
-            break;
-        end
+        
         # perform steepest descent step
-        #@print(x);
-        #for k = 1:length(mu_pr)
-        #    z[k] = z[k] - alpha*Fgrad[k]
-        #end
+        
         z[1:length(mu_pr)] = z[1:length(mu_pr)] - alpha*Fgrad[1:length(mu_pr)]
+        z_try = zeros(3)
         for k = length(mu_pr)+1:length(z)
-            z_try = z[k] - alpha*Fgrad[k]
-            if (z_try > 1e-6)
-                z[k] = z_try
-            end
-            #z[k] = max(z_try,1e-6)
+            z_try[k-2] = z[k] - alpha*Fgrad[k]
         end
+        if (z_try[1] > 1e-6) &&(z_try[2] > 1e-6) &&(z_try[3] >=0) && (z_try[1]*z_try[2]-z_try[3]^2 > 0)
+            z[length(mu_pr)+1:length(z)] = z_try
+        end
+        #z[k] = max(z_try,1e-6)
         #Fval_old = Fval;
  
         # print how we're doing, every 10 iterations
@@ -167,9 +143,29 @@ function SteepestDescent(z0,alpha)
         end
  
     end
-    if successflag == false
-        @printf("Failed to converge after %d iterations, function value %f\n", MaxIter, ELBO(z))
-    end
+    # plot
+        # Contour plot
+        # Mean and covariance matrix for the Gaussian distribution
+        mu_post = vec(z[1:length(mu_pr)]);
+        sigma2_post = z[length(mu_pr)+1:length(z)];
+        Sigma2 = diagm(sigma2_post[1:2]);
+        Sigma2[1, 2] = sigma2_post[3];
+        Sigma2[2, 1] = sigma2_post[3]
+        # Create a grid of x and y values
+        dx = range(beta_true[1]-2, stop=(beta_true[1]+2), length=100)
+        dy = range(beta_true[2]-1, stop=(beta_true[2]+1), length=100)
+
+        # Evaluate the Gaussian density at each point in the grid
+        Z = [pdf(MvNormal(mu_post, Sigma2), [xi, yi]) for xi in dx, yi in dy]
+        Z = reshape(Z, length(dx), length(dy))'
+
+        Z_theo = [pdf(MvNormal(mu_theo, sigma2_theo), [xi, yi]) for xi in dx, yi in dy]
+        Z_theo = reshape(Z_theo, length(dx), length(dy))'
+
+        contour(dx, dy, Z, xlabel="beta_1", ylabel="beta_2", title="2D Gaussian Distribution Contour Map", fill=false, c=:blues, color=:blue, colorbar=true, ratio = 1.0)
+        savefig("GD.png")
+        contour(dx, dy, Z_theo, xlabel="beta_1", ylabel="beta_2", title="2D Gaussian Distribution Contour Map", fill=false, c=:reds, color=:red, colorbar=true, ratio = 1.0)
+        savefig("Theoredical_GD.png")
     return z';
  end
 
@@ -177,7 +173,7 @@ function SteepestDescent(z0,alpha)
 function SteepestDescentArmijo(z0, c1)
 
     # parameters for Armijo's rule
-    alpha0 = 10.0;    # initial value of alpha, to try in backtracking
+    alpha0 = 0.1;    # initial value of alpha, to try in backtracking
     eta = 0.5;       # factor with which to scale alpha, each time you backtrack
     MaxBacktrack = 20;  # maximum number of backtracking steps
 
@@ -207,8 +203,8 @@ function SteepestDescentArmijo(z0, c1)
                 sigma2_post = z[length(mu_pr)+1:length(z)];
                 Sigma2 = diagm(sigma2_post);
                 # Create a grid of x and y values
-                dx = range(1, stop=5, length=100)
-                dy = range(8, stop=12, length=100)
+                dx = range(beta_true[1]-2, stop=(beta_true[1]+2), length=100)
+                dy = range(beta_true[2]-2, stop=(beta_true[2]+2), length=100)
 
                 # Create a grid of points
                 X = [xi for xi in dx, yi in dy]
@@ -222,25 +218,30 @@ function SteepestDescentArmijo(z0, c1)
                 #savefig("Plot1.png")
             break;
         end
-
+        
         # perform line search
         for k = 1:MaxBacktrack
-            z_try = zeros(length(z))
+            z_try = z
             z_try[1:length(mu_pr)] = z[1:length(mu_pr)] - alpha*Fgrad[1:length(mu_pr)]
-            for k = length(mu_pr)+1:length(z)
-                z_try1 = z[k] - alpha*Fgrad[k]
-                if (z_try1 > 1e-6)
-                    z_try[k] = z_try1
+            z_try1 = zeros(3)
+            for p = length(mu_pr)+1:length(z)
+                z_try1[p-2] = z[p] - alpha*Fgrad[p]
+            end
+            if (z_try1[1] > 1e-6) &&(z_try1[2] > 1e-6) &&(z_try1[3] >= 0) && (z_try1[1]*z_try1[2]-z_try1[3]^2 > 0)
+                z_try[length(mu_pr)+1:length(z)] = z_try1
+                Fval_try = neg_ELBO(z_try);
+                if (Fval_try > Fval - c1*alpha *(Fgrad'*Fgrad)[1])
+                    alpha = alpha * eta;
+                else
+                    Fval = Fval_try;
+                    z = z_try;
+                    break;
                 end
-            end
-            Fval_try = neg_ELBO(z_try);
-            if (Fval_try > Fval - c1*alpha *(Fgrad'*Fgrad)[1])
-                alpha = alpha * eta;
             else
-                Fval = Fval_try;
-                z = z_try;
-                break;
+                alpha = alpha * eta;
             end
+
+            
         end
 
         # print how we're doing, every 10 iterations
@@ -257,5 +258,5 @@ function SteepestDescentArmijo(z0, c1)
     return z';
 end
 
-SteepestDescent(z0, 0.01);
+SteepestDescent(z0, 0.0005);
 #SteepestDescentArmijo(z0, 1e-3);
