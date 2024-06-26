@@ -4,21 +4,21 @@ clear global;
 
 % Generate synthetic data
 rng(123); % For reproducibility
-n = 10;
+n = 3;
 %x = randn(n,2);
 %disp(x);
 x1 = randn(n,1);
 rng(234)
-x2 = x1 + 0.1*randn(n,1);
+x2 = x1 + 0.01*randn(n,1);
 x = [x1 x2];
-true_slope = [2;3];
+true_slope = [2;4];
 %true_intercept = 0;
 noise = 0.1;
 rng(345);
 y = x * true_slope + sqrt(noise) * randn(n, 1);
 
 beta_pr_mu = [1; 2];
-beta_pr_sigma2_mx = inv([1 0; 0 1]);
+beta_pr_sigma2_mx = inv([2 0; 0 2]);
 beta_pr_sigma2 = [beta_pr_sigma2_mx(1,1); beta_pr_sigma2_mx(2,2)];
 %beta_pr_sigma2 = [0.01; 0.01]; % the first entry is sigma11 and the second entry is sigma22, sigma12 = sigma21 = 0
 
@@ -35,7 +35,7 @@ disp(res);
 sig_pr = beta_pr_sigma2_mx;
 mu_pr = beta_pr_mu;
 sig_post = inv(sig_pr + x'*x/noise);
-mu_post = (mu_pr'/sig_pr+y'*x/noise)/(inv(sig_pr)+x'*x/noise);
+mu_post = (mu_pr'/sig_pr+y'*x/noise)*sig_post;
 
 %------------------------------------------------------------------------------------------------------------
 
@@ -116,7 +116,7 @@ function res = CAVI(x, y, beta_pr_mu, beta_pr_sigma2, noise)
     beta_sigma2(1) = sum(x1.^2)/noise+beta_pr_sigma2(1);
     beta_sigma2(2) = sum(x2.^2)/noise+beta_pr_sigma2(2);
 
-    for i = 1:100
+    for i = 1:1000
         %if (abs(ELBO_old - ELBO_new) >= epsilon)
 
         ELBO_old = ELBO_new;

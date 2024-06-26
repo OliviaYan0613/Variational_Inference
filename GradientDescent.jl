@@ -3,16 +3,16 @@ using Printf, ForwardDiff, Distributions, Random, LinearAlgebra, Plots, Flux
 Random.seed!(13);
 
 # setup
-beta_true =  [2.0 3.0]';
+beta_true =  [3.0 10.0]';
 #beta_true = 3
 n = 10;
 
-MaxIter = 1000;
-tol = 1e-4; 
+MaxIter = 5000;
+#tol = 1e-4; 
 
-mu_pr = [1.0 1.0]';
+mu_pr = [2.0 5.0]';
 #mu_pr = 1
-sigma2_pr = [2.0 1.0; 1.0 1.0];
+sigma2_pr = [2.0 0.0; 0.0 5.0];
 #sigma2_pr = 1
 noise = 0.01;
 
@@ -179,15 +179,13 @@ function SteepestDescent(z0,alpha)
 function SteepestDescentArmijo(z0, c1)
 
     # parameters for Armijo's rule
-    alpha0 = 0.1;    # initial value of alpha, to try in backtracking
-    eta = 0.5;       # factor with which to scale alpha, each time you backtrack
+    alpha0 = 0.001;    # initial value of alpha, to try in backtracking
+    eta = 0.01;       # factor with which to scale alpha, each time you backtrack
     MaxBacktrack = 20;  # maximum number of backtracking steps
 
     # setup for steepest descent
     z = z0;
     successflag = false;
-    #mu_iter = [];
-    #sigma2_iter = [];
 
     # perform steepest descent iterations
     for iter = 1:MaxIter
@@ -197,25 +195,26 @@ function SteepestDescentArmijo(z0, c1)
         Fgrad = G_ELBO(z);
         #display(Fgrad);
         
-        #if sqrt(Fgrad'*Fgrad)[1] < tol
-        #    display(z')
-        #    @printf("Converged after %d iterations, function value %f\n", iter, -Fval)
-        #    successflag = true;
-        #    break;
-        #end
+        if sqrt(Fgrad'*Fgrad)[1] < tol
+            display(z')
+            @printf("Converged after %d iterations, function value %f\n", iter, -Fval)
+            successflag = true;
+            break;
+        end
         
         # perform line search
         for k = 1:MaxBacktrack
             z_try = z
             z_try1 = zeros(3)
             for p = length(mu_pr)+1:length(z)
-                z_try1[p-2] = z[p] - 0.5*alpha*Fgrad[p]
+                z_try1[p-2] = z[p] - 0.75*alpha*Fgrad[p]
             end
             if (z_try1[1] > 0) &&(z_try1[2] > 0) && (z_try1[1]*z_try1[2]-z_try1[3]^2 >= 0)
                 z_try[length(mu_pr)+1:length(z)] = z_try1
                 z_try[1:length(mu_pr)] = z[1:length(mu_pr)] - alpha*Fgrad[1:length(mu_pr)]
                 Fval_try = neg_ELBO(z_try);
                 if (Fval_try > Fval - c1*alpha *(Fgrad'*Fgrad)[1])
+                #if (Fval_try > Fval - c1*alpha * norm(Fgrad))
                     alpha = alpha * eta;
                 else
                     Fval = Fval_try;
@@ -225,12 +224,10 @@ function SteepestDescentArmijo(z0, c1)
             else
                 alpha = alpha * eta;
             end
-
-            
         end
 
         # print how we're doing, every 10 iterations
-        if (iter%10==0)
+        if (iter%100==0)
             @printf("iter: %d: alpha: %f, %f\n", iter, alpha, -Fval)
             display(z')
         end
@@ -268,6 +265,5 @@ function SteepestDescentArmijo(z0, c1)
 
     return z';
 end
-
-#SteepestDescent(z0, 0.0005);
-SteepestDescentArmijo(z0, 1e-3);
+SteepestDescent(z0, 0.001);
+#SteepestDescentArmijo(z0, 1e-3);
