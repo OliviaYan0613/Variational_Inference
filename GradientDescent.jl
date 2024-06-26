@@ -125,7 +125,7 @@ function SteepestDescent(z0,alpha)
         # perform steepest descent step
         z_try = zeros(3)
         for k = length(mu_pr)+1:length(z)
-            z_try[k-2] = z[k] - alpha*Fgrad[k]
+            z_try[k-2] = z[k] - 0.75*alpha*Fgrad[k]
         end
         if (z_try[1] > 0) &&(z_try[2] > 0) && (z_try[1]*z_try[2]-z_try[3]^2 >= 0)
             z[length(mu_pr)+1:length(z)] = z_try
