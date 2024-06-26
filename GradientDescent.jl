@@ -3,16 +3,16 @@ using Printf, ForwardDiff, Distributions, Random, LinearAlgebra, Plots, Flux
 Random.seed!(13);
 
 # setup
-beta_true =  [3.0 10.0]';
+beta_true =  [3.0 2.0]';
 #beta_true = 3
 n = 10;
 
 MaxIter = 5000;
 #tol = 1e-4; 
 
-mu_pr = [2.0 5.0]';
+mu_pr = [2.0 3.0]';
 #mu_pr = 1
-sigma2_pr = [2.0 0.0; 0.0 5.0];
+sigma2_pr = [2.0 1.0; 1.0 2.0];
 #sigma2_pr = 1
 noise = 0.01;
 
@@ -36,7 +36,7 @@ function p_y(beta)
     #prob = exp(-0.5*(y - x*beta)'*(y - x*beta)/noise)/(2*pi*sqrt(noise))
     prob = exp(-0.5*((y - x*beta)'*(y - x*beta))[1]/noise)/(2*pi*sqrt(noise))^length(y)
     #prob = pdf(Normal(x*beta, noise), y)
-    prob = max(prob[1],1e-200)
+    prob = max(prob[1],1e-300)
     return prob
 end
 # p(beta)
@@ -108,7 +108,7 @@ end
 
 function G_ELBO(z) 
     diff = ForwardDiff.gradient(neg_ELBO, z)
-    #diff  = gradient(neg_ELBO, z)
+    #diff  = Flux.gradient(neg_ELBO, z)[1]
     return diff
 end
 
@@ -123,11 +123,9 @@ function SteepestDescent(z0,alpha)
         Fgrad = G_ELBO(z);
         
         # perform steepest descent step
-        
-        #z[1:length(mu_pr)] = z[1:length(mu_pr)] - alpha*Fgrad[1:length(mu_pr)]
         z_try = zeros(3)
         for k = length(mu_pr)+1:length(z)
-            z_try[k-2] = z[k] - 0.75*alpha*Fgrad[k]
+            z_try[k-2] = z[k] - alpha*Fgrad[k]
         end
         if (z_try[1] > 0) &&(z_try[2] > 0) && (z_try[1]*z_try[2]-z_try[3]^2 >= 0)
             z[length(mu_pr)+1:length(z)] = z_try
@@ -195,7 +193,7 @@ function SteepestDescentArmijo(z0, c1)
         Fgrad = G_ELBO(z);
         #display(Fgrad);
         
-        if sqrt(Fgrad'*Fgrad)[1] < tol
+        if norm(Fgrad)[1] < tol
             display(z')
             @printf("Converged after %d iterations, function value %f\n", iter, -Fval)
             successflag = true;
