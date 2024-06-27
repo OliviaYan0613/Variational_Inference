@@ -117,10 +117,14 @@ function SteepestDescent(z0,alpha)
     # setup for steepest descent
     z = z0;
     lr = alpha;
+    grad_list = [];
+    mean_grad = [];
     # perform steepest descent iterations
     for iter = 1:MaxIter
         Fval = ELBO(z);
         Fgrad = G_ELBO(z);
+        push!(grad_list,norm(Fgrad));
+        push!(mean_grad,mean(grad_list));
         
         # perform steepest descent step
         z_try = zeros(3)
@@ -170,6 +174,11 @@ function SteepestDescent(z0,alpha)
         savefig("Theoredical_GD.png")
         plot(p1, p2, layout=(1, 2), size=(1000, 400))
         savefig("Plot1.png")
+
+        x_i = 1:length(grad_list)
+        plot(x_i, grad_list, xlabel = "iterates", ylabel = "norm of gradient of ELBO", title = "gradient of ELBO with Time")
+        plot!(x_i, mean_grad, label = "mean")
+        savefig("gradient.png")
     return z';
  end
 
@@ -185,6 +194,9 @@ function SteepestDescentArmijo(z0, c1)
     z = z0;
     successflag = false;
 
+    grad_list = [];
+    mean_grad = [];
+
     # perform steepest descent iterations
     for iter = 1:MaxIter
         alpha = alpha0;
@@ -192,6 +204,8 @@ function SteepestDescentArmijo(z0, c1)
         #display(Fval);
         Fgrad = G_ELBO(z);
         #display(Fgrad);
+        push!(grad_list,norm(Fgrad));
+        push!(mean_grad,mean(grad_list));
         
         if norm(Fgrad)[1] < tol
             display(z')
@@ -261,7 +275,12 @@ function SteepestDescentArmijo(z0, c1)
         plot(p1, p2, layout=(1, 2), size=(1000, 400))
         savefig("Plot2.png")
 
+        x_i = 1:length(grad_list)
+        plot(x_i, grad_list, xlabel = "iterates", ylabel = "norm of gradient of ELBO", title = "gradient of ELBO with Time")
+        plot!(x_i, mean_grad, label = "mean")
+        savefig("gradient_armijo.png")
+
     return z';
 end
-SteepestDescent(z0, 0.001);
-#SteepestDescentArmijo(z0, 1e-3);
+#SteepestDescent(z0, 0.001);
+SteepestDescentArmijo(z0, 1e-3);
