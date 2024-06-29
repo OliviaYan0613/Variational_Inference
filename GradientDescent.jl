@@ -3,7 +3,7 @@ using Printf, ForwardDiff, Distributions, Random, LinearAlgebra, Plots, Flux
 #Random.seed!(13);
 
 # setup
-beta_true =  [3.0 2.0]';
+beta_true =  [4.0 2.0]';
 #beta_true = 3
 n = 10;
 
