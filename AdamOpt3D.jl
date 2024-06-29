@@ -4,7 +4,7 @@ using Printf, ForwardDiff, Distributions, Random, LinearAlgebra, GLMakie, Flux, 
 #Random.seed!(13);
 
 # setup
-beta_true =  [3.0 2.0 2.0]';
+beta_true =  [3.0 2.0 3.0]';
 #beta_true = 3
 n = 10;
 
