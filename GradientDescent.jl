@@ -1,6 +1,6 @@
 using Printf, ForwardDiff, Distributions, Random, LinearAlgebra, Plots, Flux
 
-Random.seed!(13);
+#Random.seed!(13);
 
 # setup
 beta_true =  [3.0 2.0]';
@@ -119,12 +119,14 @@ function SteepestDescent(z0,alpha)
     lr = alpha;
     grad_list = [];
     mean_grad = [];
+    ELBO_list = [];
     # perform steepest descent iterations
     for iter = 1:MaxIter
         Fval = ELBO(z);
         Fgrad = G_ELBO(z);
         push!(grad_list,norm(Fgrad));
         push!(mean_grad,mean(grad_list));
+        push!(ELBO_list, Fval);
         
         # perform steepest descent step
         z_try = zeros(3)
@@ -179,6 +181,9 @@ function SteepestDescent(z0,alpha)
         plot(x_i, grad_list, xlabel = "iterates", ylabel = "norm of gradient of ELBO", title = "gradient of ELBO with Time")
         plot!(x_i, mean_grad, label = "mean")
         savefig("gradient.png")
+
+        plot(x_i, ELBO_list, xlabel = "iterates", ylabel = "ELBO", title = "ELBO with Time")
+        savefig("ELBO.png")
     return z';
  end
 
@@ -196,6 +201,7 @@ function SteepestDescentArmijo(z0, c1)
 
     grad_list = [];
     mean_grad = [];
+    ELBO_list = [];
 
     # perform steepest descent iterations
     for iter = 1:MaxIter
@@ -206,6 +212,7 @@ function SteepestDescentArmijo(z0, c1)
         #display(Fgrad);
         push!(grad_list,norm(Fgrad));
         push!(mean_grad,mean(grad_list));
+        push!(ELBO_list,-Fval);
         
         if norm(Fgrad)[1] < tol
             display(z')
@@ -280,7 +287,10 @@ function SteepestDescentArmijo(z0, c1)
         plot!(x_i, mean_grad, label = "mean")
         savefig("gradient_armijo.png")
 
+        plot(x_i, ELBO_list, xlabel = "iterates", ylabel = "ELBO", title = "ELBO with Time")
+        savefig("ELBO_armijo.png")
+
     return z';
 end
-#SteepestDescent(z0, 0.001);
-SteepestDescentArmijo(z0, 1e-3);
+SteepestDescent(z0, 0.001);
+#SteepestDescentArmijo(z0, 1e-3);
