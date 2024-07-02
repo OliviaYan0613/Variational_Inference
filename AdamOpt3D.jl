@@ -28,6 +28,8 @@ y = x*beta_true + sqrt(noise)*randn(n);
 sigma2_theo = inv(inv(sigma2_pr)+x'*x/noise)
 sigma2_theo = round.(sigma2_theo, digits=15)
 mu_theo = vec(((mu_pr'*inv(sigma2_pr)+y'*x/noise)*sigma2_theo)')
+display(mu_theo')
+display(sigma2_theo)
 
 # prior
 # p(y|beta)
@@ -99,7 +101,7 @@ function is_positive_definite(C)
 end
 
 # Adam Optimization
-function adam_optimization(z0, alpha=0.001, beta1=0.9, beta2=0.999, epsilon=1e-8, max_iter=8000, tol=0.1)
+function adam_optimization(z0, alpha=0.001, beta1=0.9, beta2=0.999, epsilon=1e-8, max_iter=10000, tol=1.0)
     z = z0
     m = zeros(length(z0))
     v = zeros(length(z0))
@@ -165,7 +167,7 @@ function adam_optimization(z0, alpha=0.001, beta1=0.9, beta2=0.999, epsilon=1e-8
     P_scatter = reshape(P, length(dx)*length(dy)*length(dz))
     P_theo_scatter = reshape(P_theo, length(dx)*length(dy)*length(dz))
 
-    # creating fig
+    # creating 3D fig
     fig1 = Figure()
     ax1 = Axis3(fig1)
     GLMakie.scatter!(ax1, x_scatter, y_scatter, z_scatter, markersize=2, color=:blue)
@@ -180,6 +182,37 @@ function adam_optimization(z0, alpha=0.001, beta1=0.9, beta2=0.999, epsilon=1e-8
     fig2[1, 1] = ax2
     save("./AdamOptim3DTheo.png", fig2)
 
+    # create 2D for each two of beta
+    # beta1 & beta2
+    p12 = [pdf(MvNormal(mu_post, Sigma2), [xi, yi, beta_true[3]]) for xi in dx, yi in dy]
+    p12 = reshape(p12, length(dx), length(dy))'
+    p12_theo = [pdf(MvNormal(mu_theo, sigma2_theo), [xi, yi, beta_true[3]]) for xi in dx, yi in dy]
+    p12_theo = reshape(p12_theo, length(dx), length(dy))'
+    f1 = Plots.contour(dx, dy, p12, xlabel="beta_1", ylabel="beta_2", title="2D Gaussian Distribution Contour Map", fill=false, c=:blues, color=:blue, colorbar=true, ratio = 1.0)
+    f2 = Plots.contour(dx, dy, p12_theo, xlabel="beta_1", ylabel="beta_2", title="2D Gaussian Distribution Contour Map", fill=false, c=:reds, color=:red, colorbar=true, ratio = 1.0)
+    Plots.plot(f1, f2, layout=(1, 2), size=(1000, 400))
+    savefig("AdamOptim_beta1&2.png")
+
+    # beta1 & beta3
+    p13 = [pdf(MvNormal(mu_post, Sigma2), [xi, beta_true[2], zi]) for xi in dx, zi in dz]
+    p13 = reshape(p13, length(dx), length(dz))'
+    p13_theo = [pdf(MvNormal(mu_theo, sigma2_theo), [xi, beta_true[2], zi]) for xi in dx, zi in dz]
+    p13_theo = reshape(p13_theo, length(dx), length(dz))'
+    f3 = Plots.contour(dx, dz, p13, xlabel="beta_1", ylabel="beta_3", title="2D Gaussian Distribution Contour Map", fill=false, c=:blues, color=:blue, colorbar=true, ratio = 1.0)
+    f4 = Plots.contour(dx, dz, p13_theo, xlabel="beta_1", ylabel="beta_3", title="2D Gaussian Distribution Contour Map", fill=false, c=:reds, color=:red, colorbar=true, ratio = 1.0)
+    Plots.plot(f3, f4, layout=(1, 2), size=(1000, 400))
+    savefig("AdamOptim_beta1&3.png")
+
+    # beta2 & beta3
+    p23 = [pdf(MvNormal(mu_post, Sigma2), [beta_true[1], yi, zi]) for yi in dy, zi in dz]
+    p23 = reshape(p13, length(dy), length(dz))'
+    p23_theo = [pdf(MvNormal(mu_theo, sigma2_theo), [beta_true[1], yi, zi]) for yi in dy, zi in dz]
+    p23_theo = reshape(p13_theo, length(dy), length(dz))'
+    f5 = Plots.contour(dy, dz, p23, xlabel="beta_2", ylabel="beta_3", title="2D Gaussian Distribution Contour Map", fill=false, c=:blues, color=:blue, colorbar=true, ratio = 1.0)
+    f6 = Plots.contour(dy, dz, p23_theo, xlabel="beta_2", ylabel="beta_3", title="2D Gaussian Distribution Contour Map", fill=false, c=:reds, color=:red, colorbar=true, ratio = 1.0)
+    Plots.plot(f5, f6, layout=(1, 2), size=(1000, 400))
+    savefig("AdamOptim_beta2&3.png")
+
     #combined_fig = CairoMakie.hstack(fig1, fig2)
     #save("./AdamOptim3D.png", combined_fig)
 
@@ -190,7 +223,10 @@ function adam_optimization(z0, alpha=0.001, beta1=0.9, beta2=0.999, epsilon=1e-8
     savefig("ELBO_adam3D.png")
 
     println("Reached maximum iterations")
-    return z'
+    display(z[1:3])
+    mx = [z[4] z[7] z[8]; z[7] z[5] z[9]; z[8] z[9] z[6]]
+    display(mx)
+    #return z'
 end
 
 adam_optimization(z0)
