@@ -109,12 +109,12 @@ function adam_optimization(z0, alpha=0.001, beta1=0.9, beta2=0.999, epsilon=1e-8
     t = 0
     lr = alpha
     ELBO_list = []
-    g_list = []
+    log_g_list = []
 
     for i in 1:max_iter
         t += 1
         g = G_ELBO(z)
-        push!(g_list,norm(g))
+        push!(log_g_list,log(norm(g)))
         push!(ELBO_list, ELBO(z))
         
         m = beta1 * m + (1 - beta1) * g
@@ -219,7 +219,7 @@ function adam_optimization(z0, alpha=0.001, beta1=0.9, beta2=0.999, epsilon=1e-8
 
     x_i = 1:length(ELBO_list)
     p3 = Plots.plot(x_i, ELBO_list, xlabel = "iterates", ylabel = "ELBO", title = "ELBO with Time")
-    p4 = Plots.plot(x_i, g_list, xlabel = "iterates", ylabel = "Gradient of ELBO", title = "Gradient of ELBO with Time")
+    p4 = Plots.plot(x_i, log_g_list, xlabel = "iterates", ylabel = "Log of Gradient of ELBO", title = "Log of Gradient of ELBO with Time")
     Plots.plot(p3, p4, layout=(1, 2), size=(1000, 400))
     savefig("ELBO_adam3D.png")
 
