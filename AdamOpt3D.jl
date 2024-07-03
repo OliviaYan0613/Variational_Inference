@@ -4,11 +4,11 @@ using Printf, ForwardDiff, Distributions, Random, LinearAlgebra, GLMakie, Flux, 
 #Random.seed!(13);
 
 # setup
-beta_true =  [3.0 2.0 3.0]';
+beta_true =  [4.0 2.0 3.0]';
 #beta_true = 3
 n = 10;
 
-mu_pr = [2.0 3.0 3.0]';
+mu_pr = [2.0 3.0 4.0]';
 #mu_pr = 1
 sigma2_pr = [2.0 0.5 0.1; 0.5 2.0 0.1; 0.1 0.1 2.0];
 #sigma2_pr = 1
@@ -63,7 +63,8 @@ function ELBO(z)
     mu_vec = vec(z[1:length(mu_pr)])
     sigma2_vec = z[length(mu_pr)+1:length(z)]
     sigma2_mx = [sigma2_vec[1] sigma2_vec[4] sigma2_vec[5]; sigma2_vec[4] sigma2_vec[2] sigma2_vec[6]; sigma2_vec[5] sigma2_vec[6] sigma2_vec[3]]
-    N = 500
+    #N = 500
+    N = 10
     #beta = sampling(q_b, N, mu_vec, sigma2_vec);
     beta = rand(MvNormal(mu_vec, sigma2_mx), N)
     #mean_beta = mean(beta)
@@ -101,7 +102,7 @@ function is_positive_definite(C)
 end
 
 # Adam Optimization
-function adam_optimization(z0, alpha=0.001, beta1=0.9, beta2=0.999, epsilon=1e-8, max_iter=10000, tol=1.0)
+function adam_optimization(z0, alpha=0.001, beta1=0.9, beta2=0.999, epsilon=1e-8, max_iter=5e4, tol=0.01)
     z = z0
     m = zeros(length(z0))
     v = zeros(length(z0))

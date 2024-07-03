@@ -18,8 +18,10 @@ sigma2_pr_anti_diag = sigma2_pr[1,2]
 #sigma2_pr_diag = 1;
 z0 = [mu_pr; sigma2_pr_diag; sigma2_pr_anti_diag];
 
-x = randn(n,2);
-#x = randn(n);
+#x = randn(n,2);
+x1 = randn(n);
+x2 = x1 + 0.01*randn(n);
+x = [x1 x2]
 #Random.seed!(197)
 y = x*beta_true + sqrt(noise)*randn(n);
 
@@ -91,7 +93,7 @@ function G_ELBO(z)
 end
 
 # Adam Optimization
-function adam_optimization(z0, alpha=0.001, beta1=0.9, beta2=0.999, epsilon=1e-8, max_iter=5000, tol=1e-2)
+function adam_optimization(z0, alpha=0.001, beta1=0.9, beta2=0.999, epsilon=1e-8, max_iter=5000, tol=0.1)
     z = z0
     m = zeros(length(z0))
     v = zeros(length(z0))
@@ -124,7 +126,6 @@ function adam_optimization(z0, alpha=0.001, beta1=0.9, beta2=0.999, epsilon=1e-8
         
         if norm(g) < tol
             println("Converged in $i iterations")
-            return z
         end
     end
 
@@ -147,17 +148,17 @@ function adam_optimization(z0, alpha=0.001, beta1=0.9, beta2=0.999, epsilon=1e-8
     Z_theo = [pdf(MvNormal(mu_theo, sigma2_theo), [xi, yi]) for xi in dx, yi in dy]
     Z_theo = reshape(Z_theo, length(dx), length(dy))'
 
-    p1 = contour(dx, dy, Z, xlabel="beta_1", ylabel="beta_2", title="2D Gaussian Distribution Contour Map", fill=false, c=:blues, color=:blue, colorbar=true, ratio = 1.0)
+    p1 = Plots.contour(dx, dy, Z, xlabel="beta_1", ylabel="beta_2", title="2D Gaussian Distribution Contour Map", fill=false, c=:blues, color=:blue, colorbar=true, ratio = 1.0)
     #savefig("AdamOpt.png")
-    p2 = contour(dx, dy, Z_theo, xlabel="beta_1", ylabel="beta_2", title="2D Gaussian Distribution Contour Map", fill=false, c=:reds, color=:red, colorbar=true, ratio = 1.0)
+    p2 = Plots.contour(dx, dy, Z_theo, xlabel="beta_1", ylabel="beta_2", title="2D Gaussian Distribution Contour Map", fill=false, c=:reds, color=:red, colorbar=true, ratio = 1.0)
     #savefig("Theoredical_GD.png")
-    plot(p1, p2, layout=(1, 2), size=(1000, 400))
+    Plots.plot(p1, p2, layout=(1, 2), size=(1000, 400))
     savefig("AdamOptim.png")
 
     x_i = 1:length(ELBO_list)
-    p3 = plot(x_i, ELBO_list, xlabel = "iterates", ylabel = "ELBO", title = "ELBO with Time")
-    p4 = plot(x_i, g_list, xlabel = "iterates", ylabel = "Gradient of ELBO", title = "Gradient of ELBO with Time")
-    plot(p3, p4, layout=(1, 2), size=(1000, 400))
+    p3 = Plots.plot(x_i, ELBO_list, xlabel = "iterates", ylabel = "ELBO", title = "ELBO with Time")
+    p4 = Plots.plot(x_i, g_list, xlabel = "iterates", ylabel = "Gradient of ELBO", title = "Gradient of ELBO with Time")
+    Plots.plot(p3, p4, layout=(1, 2), size=(1000, 400))
     savefig("ELBO_adam.png")
 
     println("Reached maximum iterations")
