@@ -226,7 +226,7 @@ function adam_optimization(z0, alpha=0.001, beta1=0.9, beta2=0.999, epsilon=1e-8
     sigma2_23 = Sigma2[ind23,ind23]
     mu_theo23 = mu_theo[ind23]
     sigma2_theo_23 = sigma2_theo[ind23,ind23]
-    p23 = [pdf(MvNormal(mu13, sigma2_23), [yi, zi]) for yi in dy, zi in dz]
+    p23 = [pdf(MvNormal(mu23, sigma2_23), [yi, zi]) for yi in dy, zi in dz]
     p23 = reshape(p13, length(dy), length(dz))'
     p23_theo = [pdf(MvNormal(mu_theo23, sigma2_theo_23), [yi, zi]) for yi in dy, zi in dz]
     p23_theo = reshape(p13_theo, length(dy), length(dz))'
