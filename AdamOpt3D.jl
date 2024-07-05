@@ -110,12 +110,19 @@ function adam_optimization(z0, alpha=0.001, beta1=0.9, beta2=0.999, epsilon=1e-8
     lr = alpha
     ELBO_list = []
     log_g_list = []
+    g_mean_list = []
+    lr_list = []
 
     for i in 1:max_iter
         t += 1
         g = G_ELBO(z)
         push!(log_g_list,log(norm(g)))
-        push!(ELBO_list, ELBO(z))
+        push!(g_mean_list,mean(log_g_list))
+
+        if (i%100==0)
+            push!(ELBO_list, ELBO(z))
+        end
+        push!(lr_list,log(lr))
         
         m = beta1 * m + (1 - beta1) * g
         v = beta2 * v + (1 - beta2) * (g .^ 2)
@@ -136,10 +143,10 @@ function adam_optimization(z0, alpha=0.001, beta1=0.9, beta2=0.999, epsilon=1e-8
             lr = 0.5*lr
         end
         
-        if norm(g) < tol
-            println("Converged in $i iterations")
-            return z
-        end
+        #if norm(g) < tol
+        #    println("Converged in $i iterations")
+        #    return z
+        #end
     end
 
     #Plot
@@ -185,9 +192,13 @@ function adam_optimization(z0, alpha=0.001, beta1=0.9, beta2=0.999, epsilon=1e-8
 
     # create 2D for each two of beta
     # beta1 & beta2
-    p12 = [pdf(MvNormal(mu_post, Sigma2), [xi, yi, beta_true[3]]) for xi in dx, yi in dy]
+    mu12 = mu_post[1:2]
+    sigma2_12 = Sigma2[1:2,1:2]
+    mu_theo12 = mu_theo[1:2]
+    sigma2_theo_12 = sigma2_theo[1:2,1:2]
+    p12 = [pdf(MvNormal(mu12, sigma2_12), [xi, yi]) for xi in dx, yi in dy]
     p12 = reshape(p12, length(dx), length(dy))'
-    p12_theo = [pdf(MvNormal(mu_theo, sigma2_theo), [xi, yi, beta_true[3]]) for xi in dx, yi in dy]
+    p12_theo = [pdf(MvNormal(mu_theo12, sigma2_theo_12), [xi, yi]) for xi in dx, yi in dy]
     p12_theo = reshape(p12_theo, length(dx), length(dy))'
     f1 = Plots.contour(dx, dy, p12, xlabel="beta_1", ylabel="beta_2", title="2D Gaussian Distribution Contour Map", fill=false, c=:blues, color=:blue, colorbar=true, ratio = 1.0)
     f2 = Plots.contour(dx, dy, p12_theo, xlabel="beta_1", ylabel="beta_2", title="2D Gaussian Distribution Contour Map", fill=false, c=:reds, color=:red, colorbar=true, ratio = 1.0)
@@ -195,9 +206,14 @@ function adam_optimization(z0, alpha=0.001, beta1=0.9, beta2=0.999, epsilon=1e-8
     savefig("AdamOptim_beta1&2.png")
 
     # beta1 & beta3
-    p13 = [pdf(MvNormal(mu_post, Sigma2), [xi, beta_true[2], zi]) for xi in dx, zi in dz]
+    ind13 = [1,3]
+    mu13 = mu_post[ind13]
+    sigma2_13 = Sigma2[ind13,ind13]
+    mu_theo13 = mu_theo[ind13]
+    sigma2_theo_13 = sigma2_theo[ind13,ind13]
+    p13 = [pdf(MvNormal(mu13, sigma2_13), [xi, zi]) for xi in dx, zi in dz]
     p13 = reshape(p13, length(dx), length(dz))'
-    p13_theo = [pdf(MvNormal(mu_theo, sigma2_theo), [xi, beta_true[2], zi]) for xi in dx, zi in dz]
+    p13_theo = [pdf(MvNormal(mu_theo13, sigma2_theo_13), [xi, zi]) for xi in dx, zi in dz]
     p13_theo = reshape(p13_theo, length(dx), length(dz))'
     f3 = Plots.contour(dx, dz, p13, xlabel="beta_1", ylabel="beta_3", title="2D Gaussian Distribution Contour Map", fill=false, c=:blues, color=:blue, colorbar=true, ratio = 1.0)
     f4 = Plots.contour(dx, dz, p13_theo, xlabel="beta_1", ylabel="beta_3", title="2D Gaussian Distribution Contour Map", fill=false, c=:reds, color=:red, colorbar=true, ratio = 1.0)
@@ -205,9 +221,14 @@ function adam_optimization(z0, alpha=0.001, beta1=0.9, beta2=0.999, epsilon=1e-8
     savefig("AdamOptim_beta1&3.png")
 
     # beta2 & beta3
-    p23 = [pdf(MvNormal(mu_post, Sigma2), [beta_true[1], yi, zi]) for yi in dy, zi in dz]
+    ind23 = [2,3]
+    mu23 = mu_post[ind23]
+    sigma2_23 = Sigma2[ind23,ind23]
+    mu_theo23 = mu_theo[ind23]
+    sigma2_theo_23 = sigma2_theo[ind23,ind23]
+    p23 = [pdf(MvNormal(mu13, sigma2_23), [yi, zi]) for yi in dy, zi in dz]
     p23 = reshape(p13, length(dy), length(dz))'
-    p23_theo = [pdf(MvNormal(mu_theo, sigma2_theo), [beta_true[1], yi, zi]) for yi in dy, zi in dz]
+    p23_theo = [pdf(MvNormal(mu_theo23, sigma2_theo_23), [yi, zi]) for yi in dy, zi in dz]
     p23_theo = reshape(p13_theo, length(dy), length(dz))'
     f5 = Plots.contour(dy, dz, p23, xlabel="beta_2", ylabel="beta_3", title="2D Gaussian Distribution Contour Map", fill=false, c=:blues, color=:blue, colorbar=true, ratio = 1.0)
     f6 = Plots.contour(dy, dz, p23_theo, xlabel="beta_2", ylabel="beta_3", title="2D Gaussian Distribution Contour Map", fill=false, c=:reds, color=:red, colorbar=true, ratio = 1.0)
@@ -218,10 +239,15 @@ function adam_optimization(z0, alpha=0.001, beta1=0.9, beta2=0.999, epsilon=1e-8
     #save("./AdamOptim3D.png", combined_fig)
 
     x_i = 1:length(ELBO_list)
-    p3 = Plots.plot(x_i, ELBO_list, xlabel = "iterates", ylabel = "ELBO", title = "ELBO with Time")
-    p4 = Plots.plot(x_i, log_g_list, xlabel = "iterates", ylabel = "Log of Gradient of ELBO", title = "Log of Gradient of ELBO with Time")
+    y_i = 1:length(log_g_list)
+    p3 = Plots.plot(x_i*100, ELBO_list, xlabel = "iterates", ylabel = "ELBO", title = "ELBO with Time")
+    p4 = Plots.plot(y_i, log_g_list, xlabel = "iterates", ylabel = "Log of Gradient of ELBO", title = "Log of Gradient of ELBO with Time")
+    p4 = Plots.plot!(y_i, g_mean_list, label = "mean",linewidth = 2)
     Plots.plot(p3, p4, layout=(1, 2), size=(1000, 400))
     savefig("ELBO_adam3D.png")
+
+    Plots.plot(y_i, lr_list, xlabel = "iterates", ylabel = "learning rate", title = "Learning Rate with Time")
+    savefig("lr_adam3D.png")
 
     println("Reached maximum iterations")
     display(z[1:3])
