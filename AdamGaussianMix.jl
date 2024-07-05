@@ -139,7 +139,7 @@ function adam_optimization(z0, alpha=0.001, beta1=0.9, beta2=0.999, epsilon=1e-8
     p4 = Plots.plot(y_i, log_g_list, xlabel = "iterates", ylabel = "Log of Gradient of ELBO", title = "Log of Gradient of ELBO with Time")
     p4 = Plots.plot!(y_i, g_mean_list, label = "mean",linewidth = 2)
     Plots.plot(p3, p4, layout=(1, 2), size=(1000, 400))
-    savefig("ELBO_adamGaussianMix.png")
+    savefig("ELBO_AdamGaussianMix.png")
 
     return z
 end
