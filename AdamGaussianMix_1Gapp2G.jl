@@ -148,13 +148,13 @@ function adam_optimization(z0, alpha=0.001, beta1=0.9, beta2=0.999, epsilon=1e-8
 
     # Create a grid of x and y values
     dx = range(min(mu1,mu2)-1.0, stop=(max(mu1,mu2)+1.0), length=100)
-    dy = range(min(sigma1,sigma2)-1.0, stop=(max(sigma1,sigma2)+1.0), length=100)
+    dy = range(0, stop=(max(sigma1,sigma2)+2.0), length=100)
 
     # Evaluate the Gaussian density at each point in the grid
     Z = [pdf(Normal(z[1], z[2]), xi)*pdf(InverseGamma(ForwardDiff.value(z[3]),ForwardDiff.value(z[4])),yi) for xi in dx, yi in dy]
     Z = reshape(Z, length(dx), length(dy))'
 
-    Plots.contour(dx, dy, Z, xlabel="mu", ylabel="sigma2", title="2D Gaussian Distribution Contour Map", fill=false, c=:blues, color=:blue, colorbar=true, ratio = 1.0)
+    Plots.contour(dx, dy, Z, xlabel="mu", ylabel="sigma2", title="2D Gaussian Distribution Contour Map", fill=false, colorbar=true, ratio = 1.0)
     savefig("AdamGaussianMix_1Gapp2G.png")
 
     x_i = 1:length(ELBO_list)
