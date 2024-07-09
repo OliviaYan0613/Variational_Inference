@@ -24,55 +24,45 @@ y = x*beta_true + sqrt(noise)*randn(n);
 mu_pr = [2.0 3.0]';
 sigma2_pr = [1.0 1.0]';
 w_pr = [0.5 0.5]'
-z0 = [mu_pr; sigma2_pr; w_pr]
+#z0 = [mu_pr; sigma2_pr; w_pr]
+z0 = [2.0, 1.0]             #z0 = [mu_0, sigma2_0]
 
 # p(y|beta)
 function p_y(beta)
     prob = exp(-0.5*((y - x*beta)'*(y - x*beta))[1]/noise)/(2*pi*sqrt(noise))^length(y)
-
     prob = max(prob[1],1e-300)
     return prob
 end
 # p(beta)
 function p_b(beta)
-    #prob = exp(-0.5*(beta - mu_pr)'*inv(sigma2_pr)*(beta - mu_pr))/sqrt((2*pi)^2*norm(sigma2_pr))
-    #prob = exp(-0.5*(beta - mu_pr)'*inv(sigma2_pr)*(beta - mu_pr))
-    prob = pdf(MvNormal(vec(mu_pr), sigma2_pr), beta)
-    #prob = max(prob[1],1e-200)
+    g1 = Normal(mu_pr[1], sigma2_pr[1])
+    g2 = Normal(mu_pr[2], sigma2_pr[2])
+    prob = w_pr[1]*pdf(g1,beta)+w_pr[2]*pdf(g2,beta)
     return prob
 end
 # q(beta)
 function q_b(beta,mu,sigma2)
-    sigma2_mx = [sigma2[1] sigma2[3]; sigma2[3] sigma2[2]]
-    #prob = exp(- 0.5*(beta - mu)'*inv(sigma2_mx)*(beta - mu))/sqrt((2*pi)^2*norm(sigma2_mx))
-    #prob = exp(- 0.5*(beta - mu)'*inv(sigma2_mx)*(beta - mu))
-    prob = pdf(MvNormal(vec(mu), sigma2_mx), beta)
-    #prob = max(prob[1],1e-200)
+    prob = pdf(Normal(mu, sigma2), beta)
     return prob
 end
 
 function ELBO(z)
     res = 0
-    mu_vec = vec(z[1:length(mu_pr)])
-    sigma2_vec = z[length(mu_pr)+1:length(z)]
-    sigma2_mx = [sigma2_vec[1] sigma2_vec[3]; sigma2_vec[3] sigma2_vec[2]]
+    mu = z[1]
+    sigma2 = z[2]
     N = 10
     #beta = sampling(q_b, N, mu_vec, sigma2_vec);
-    beta = rand(MvNormal(mu_vec, sigma2_mx), N)
+    beta = rand(Normal(mu, sigma2), N)
     #mean_beta = mean(beta)
     log_p_y = 0
     log_p_b = 0
     log_q_b = 0
-    for i = 1:size(beta)[2]
-        b = [beta[1, i] beta[2, i]]'
+    for b in beta
         log_p_y = log_p_y + log(p_y(b)[1])
         log_p_b = log_p_b + log(p_b(b)[1])
-        log_q_b = log_q_b + log(q_b(b,mu_vec,sigma2_vec)[1])
-        #val = log(p_y(b)[1]*p_b(b)[1])-log(q_b(b,mu_vec,sigma2_vec)[1])
-        #res = res + val/N
-        #display(res)
+        log_q_b = log_q_b + log(q_b(b,mu,sigma2)[1])
     end
-    res = (log_p_y + log_p_b - log_q_b)/length(beta)
+    res = (log_p_y + log_p_b - log_q_b)/N
     return res
 end
  
@@ -111,7 +101,7 @@ function adam_optimization(z0, alpha=0.001, beta1=0.9, beta2=0.999, epsilon=1e-8
 
         z_try = z - lr * m_hat ./ (sqrt.(v_hat) .+ epsilon)
 
-        if (z_try[3] > 0) &&(z_try[4] > 0) && (z_try[3]*z_try[4]-z_try[5]^2 >= 0)
+        if (z_try[2] > 0)
             z = z_try
             #display(z)
             lr = alpha
@@ -127,34 +117,23 @@ function adam_optimization(z0, alpha=0.001, beta1=0.9, beta2=0.999, epsilon=1e-8
     #Plot
      # Contour plot
     # Mean and covariance matrix for the Gaussian distribution
-    mu_post = vec(z[1:length(mu_pr)]);
-    sigma2_post = z[length(mu_pr)+1:length(z)];
-    Sigma2 = diagm(sigma2_post[1:2]);
-    Sigma2[1, 2] = sigma2_post[3];
-    Sigma2[2, 1] = sigma2_post[3]
-    # Create a grid of x and y values
-    dx = range(beta_true[1]-0.5, stop=(beta_true[1]+0.5), length=100)
-    dy = range(beta_true[2]-0.5, stop=(beta_true[2]+0.5), length=100)
+    mu_post = z[1];
+    sigma2_post = z[2];
+
+    # Create a grid of x values
+    dx = range(beta_true-0.5, stop=(beta_true+0.5), length=200)
 
     # Evaluate the Gaussian density at each point in the grid
-    Z = [pdf(MvNormal(mu_post, Sigma2), [xi, yi]) for xi in dx, yi in dy]
-    Z = reshape(Z, length(dx), length(dy))'
+    Z = [pdf(Normal(mu_post, sigma2_post), xi) for xi in dx]
 
-    Z_theo = [pdf(MvNormal(mu_theo, sigma2_theo), [xi, yi]) for xi in dx, yi in dy]
-    Z_theo = reshape(Z_theo, length(dx), length(dy))'
-
-    p1 = Plots.contour(dx, dy, Z, xlabel="beta_1", ylabel="beta_2", title="2D Gaussian Distribution Contour Map", fill=false, c=:blues, color=:blue, colorbar=true, ratio = 1.0)
-    #savefig("AdamOpt.png")
-    p2 = Plots.contour(dx, dy, Z_theo, xlabel="beta_1", ylabel="beta_2", title="2D Gaussian Distribution Contour Map", fill=false, c=:reds, color=:red, colorbar=true, ratio = 1.0)
-    #savefig("Theoredical_GD.png")
-    Plots.plot(p1, p2, layout=(1, 2), size=(1000, 400))
-    savefig("AdamOptim.png")
+    Plots.plot(dx, Z, xlabel="beta_1", ylabel="probability density", title="1D Gaussian Distribution Contour Map", fill=false, colorbar=true)
+    savefig("AdamGMMP2Q1.png")
 
     x_i = 1:length(ELBO_list)
     p3 = Plots.plot(x_i, ELBO_list, xlabel = "iterates", ylabel = "ELBO", title = "ELBO with Time")
     p4 = Plots.plot(x_i, g_list, xlabel = "iterates", ylabel = "Log of Gradient of ELBO", title = "Log of Gradient of ELBO with Time")
     Plots.plot(p3, p4, layout=(1, 2), size=(1000, 400))
-    savefig("ELBO_adam.png")
+    savefig("ELBO_AdamGMMP2Q1.png")
 
     println("Reached maximum iterations")
     return z
