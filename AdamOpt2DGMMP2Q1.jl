@@ -1,20 +1,32 @@
 using Printf, ForwardDiff, Distributions, Random, LinearAlgebra, Plots, Flux
 
 # setup
-beta_true =  [3.0 2.0]';
-#beta_true = 3
+#beta_true =  [3.0 2.0]';
+beta1_true = [3.0, 2.0]
+beta2_true = [2.5, 1.0]
 n = 10;
+w1,w2 = 0.5, 0.5
+noise = 0.01;
 
 x = randn(n,2);
+
 #x1 = randn(n);
 #x2 = x1 + 0.01*randn(n);
 #x = [x1 x2]
-y = x*beta_true + sqrt(noise)*randn(n);
+
+y = zeros(n)
+c = rand(n)
+for i in 1:n
+    if c[i]<= w1
+        y[i] = [x[i,1], x[i,2]]'*beta1_true + sqrt(noise)*randn();
+    else
+        y[i] = [x[i,1], x[i,2]]'*beta2_true + sqrt(noise)*randn();
+    end
+end
 
 # Start Point
 mu_pr = [2.0 3.0]';
 sigma2_pr = [2.0 0.5; 0.5 2.0];
-noise = 0.01;
 
 sigma2_pr_diag = [sigma2_pr[1,1] sigma2_pr[2,2]]';
 sigma2_pr_anti_diag = sigma2_pr[1,2]
@@ -115,9 +127,9 @@ function adam_optimization(z0, alpha=0.001, beta1=0.9, beta2=0.999, epsilon=1e-8
             lr = 0.5*lr
         end
         
-        if norm(g) < tol
-            println("Converged in $i iterations")
-        end
+        #if norm(g) < tol
+        #    println("Converged in $i iterations")
+        #end
     end
 
     #Plot
