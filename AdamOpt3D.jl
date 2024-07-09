@@ -240,7 +240,7 @@ function adam_optimization(z0, alpha=0.001, beta1=0.9, beta2=0.999, epsilon=1e-8
 
     x_i = 1:length(ELBO_list)
     y_i = 1:length(log_g_list)
-    p3 = Plots.plot(x_i*100, ELBO_list, xlabel = "iterates", ylabel = "ELBO", title = "ELBO with Time")
+    p3 = Plots.plot(x_i, ELBO_list, xlabel = "iterates", ylabel = "ELBO", title = "ELBO with Time")
     p4 = Plots.plot(y_i, log_g_list, xlabel = "iterates", ylabel = "Log of Gradient of ELBO", title = "Log of Gradient of ELBO with Time")
     p4 = Plots.plot!(y_i, g_mean_list, label = "mean",linewidth = 2)
     Plots.plot(p3, p4, layout=(1, 2), size=(1000, 400))

@@ -3,9 +3,13 @@ using Printf, ForwardDiff, Distributions, Random, LinearAlgebra, Plots, Flux
 #Random.seed!(13);
 
 # setup
-beta_true =  3.0;
-n = 10;
+#beta_true =  3.0;
+n = 30;
 noise = 0.01;
+
+beta1_true = 3.0
+beta2_true = 2.0
+weight = [0.4 0.6]
 
 x = randn(n,1);
 
@@ -18,14 +22,25 @@ x = randn(n,1);
 #x2 = x1 + 0.01*randn(n);
 #x = [x1 x2]
 
-y = x*beta_true + sqrt(noise)*randn(n);
+#y = x*beta_true + sqrt(noise)*randn(n);
+y = zeros(n)
+c = rand(n)
+colors = Vector{Symbol}(undef, n)
+for i in 1:n
+    if c[i]>= weight[1]
+        y[i] = x[i]*beta1_true+sqrt(noise)*randn()
+        colors[i]=:red
+    else
+        y[i] = x[i]*beta2_true+sqrt(noise)*randn()
+        colors[i]=:blue
+    end
+end
 
-p1 = Plots.scatter(x, y, xlabel = "x", ylabel = "y", title = "Data distribution")
-
+p1 = Plots.scatter(x, y, xlabel = "x", ylabel = "y", title = "Data distribution",color=colors)
 
 # prior
 mu_pr = [2.0 3.0]';
-sigma2_pr = [1.0 1.0]';
+sigma2_pr = [2.0 2.0]';
 w_pr = [0.5 0.5]'
 
 # Start Point
@@ -113,9 +128,9 @@ function adam_optimization(z0, alpha=0.001, beta1=0.9, beta2=0.999, epsilon=1e-8
             lr = 0.5*lr
         end
         
-        if norm(g) < tol
-            println("Converged in $i iterations")
-        end
+        #if norm(g) < tol
+        #    println("Converged in $i iterations")
+        #end
     end
 
     #Plot
@@ -125,7 +140,7 @@ function adam_optimization(z0, alpha=0.001, beta1=0.9, beta2=0.999, epsilon=1e-8
     sigma2_post = z[2];
 
     # Create a grid of x values
-    dx = range(beta_true-0.5, stop=(beta_true+0.5), length=200)
+    dx = range(min(beta_true)-1, stop=(max(beta_true)+1), length=200)
 
     # Evaluate the Gaussian density at each point in the grid
     Z = [pdf(Normal(mu_post, sigma2_post), xi) for xi in dx]
