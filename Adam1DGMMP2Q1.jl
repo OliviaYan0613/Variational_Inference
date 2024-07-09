@@ -128,13 +128,13 @@ function adam_optimization(z0, alpha=0.001, beta1=0.9, beta2=0.999, epsilon=1e-8
     Z = [pdf(Normal(mu_post, sigma2_post), xi) for xi in dx]
 
     Plots.plot(dx, Z, xlabel="beta_1", ylabel="probability density", title="1D Gaussian Distribution Contour Map", fill=false, colorbar=true)
-    savefig("AdamGMMP2Q1.png")
+    savefig("Adam1DGMMP2Q1.png")
 
     x_i = 1:length(ELBO_list)
     p3 = Plots.plot(x_i, ELBO_list, xlabel = "iterates", ylabel = "ELBO", title = "ELBO with Time")
     p4 = Plots.plot(x_i, g_list, xlabel = "iterates", ylabel = "Log of Gradient of ELBO", title = "Log of Gradient of ELBO with Time")
     Plots.plot(p3, p4, layout=(1, 2), size=(1000, 400))
-    savefig("ELBO_AdamGMMP2Q1.png")
+    savefig("ELBO_Adam1DGMMP2Q1.png")
 
     println("Reached maximum iterations")
     return z
