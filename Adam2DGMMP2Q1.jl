@@ -141,8 +141,8 @@ function adam_optimization(z0, alpha=0.001, beta1=0.9, beta2=0.999, epsilon=1e-8
     Sigma2[1, 2] = sigma2_post[3];
     Sigma2[2, 1] = sigma2_post[3]
     # Create a grid of x and y values
-    dx = range(beta_true[1]-0.3, stop=(beta_true[1]+0.3), length=100)
-    dy = range(beta_true[2]-0.3, stop=(beta_true[2]+0.3), length=100)
+    dx = range(min(beta1_true[1],beta2_true[1])-0.3, stop=(max(beta1_true[1],beta2_true[1])+0.3), length=100)
+    dy = range(min(beta1_true[2],beta2_true[2])-0.3, stop=(max(beta1_true[2],beta2_true[2])+0.3), length=100)
 
     # Evaluate the Gaussian density at each point in the grid
     Z = [pdf(MvNormal(mu_post, Sigma2), [xi, yi]) for xi in dx, yi in dy]
