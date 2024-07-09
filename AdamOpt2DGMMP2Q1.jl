@@ -21,9 +21,9 @@ sigma2_pr_anti_diag = sigma2_pr[1,2]
 z0 = [mu_pr; sigma2_pr_diag; sigma2_pr_anti_diag];
 
 # prior
-mu1 = [3.0 3.5]'
+mu1 = [3.0; 3.5]
 sigma2_1 = [1.0 0.5; 0.5 1.0];
-mu1 = [2.0 3.0]'
+mu2 = [2.0; 3.0]
 sigma2_2 = [1.1 0.5; 0.5 1.5];
 weight = [0.3 0.7]                  # must sum to 1
 
@@ -129,28 +129,21 @@ function adam_optimization(z0, alpha=0.001, beta1=0.9, beta2=0.999, epsilon=1e-8
     Sigma2[1, 2] = sigma2_post[3];
     Sigma2[2, 1] = sigma2_post[3]
     # Create a grid of x and y values
-    dx = range(beta_true[1]-0.5, stop=(beta_true[1]+0.5), length=100)
-    dy = range(beta_true[2]-0.5, stop=(beta_true[2]+0.5), length=100)
+    dx = range(beta_true[1]-0.3, stop=(beta_true[1]+0.3), length=100)
+    dy = range(beta_true[2]-0.3, stop=(beta_true[2]+0.3), length=100)
 
     # Evaluate the Gaussian density at each point in the grid
     Z = [pdf(MvNormal(mu_post, Sigma2), [xi, yi]) for xi in dx, yi in dy]
     Z = reshape(Z, length(dx), length(dy))'
 
-    Z_theo = [pdf(MvNormal(mu_theo, sigma2_theo), [xi, yi]) for xi in dx, yi in dy]
-    Z_theo = reshape(Z_theo, length(dx), length(dy))'
-
-    p1 = Plots.contour(dx, dy, Z, xlabel="beta_1", ylabel="beta_2", title="2D Gaussian Distribution Contour Map", fill=false, c=:blues, color=:blue, colorbar=true, ratio = 1.0)
-    #savefig("AdamOpt.png")
-    p2 = Plots.contour(dx, dy, Z_theo, xlabel="beta_1", ylabel="beta_2", title="2D Gaussian Distribution Contour Map", fill=false, c=:reds, color=:red, colorbar=true, ratio = 1.0)
-    #savefig("Theoredical_GD.png")
-    Plots.plot(p1, p2, layout=(1, 2), size=(1000, 400))
-    savefig("AdamOptim.png")
+    Plots.contour(dx, dy, Z, xlabel="beta_1", ylabel="beta_2", title="2D Gaussian Distribution Contour Map", fill=false, colorbar=true, ratio = 1.0)
+    savefig("Adam2DGMMP2Q1.png")
 
     x_i = 1:length(ELBO_list)
     p3 = Plots.plot(x_i, ELBO_list, xlabel = "iterates", ylabel = "ELBO", title = "ELBO with Time")
     p4 = Plots.plot(x_i, g_list, xlabel = "iterates", ylabel = "Log of Gradient of ELBO", title = "Log of Gradient of ELBO with Time")
     Plots.plot(p3, p4, layout=(1, 2), size=(1000, 400))
-    savefig("ELBO_adam.png")
+    savefig("ELBO_Adam2DGMMP2Q1.png.png")
 
     println("Reached maximum iterations")
     return z
