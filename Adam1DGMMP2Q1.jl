@@ -20,6 +20,9 @@ x = randn(n,1);
 
 y = x*beta_true + sqrt(noise)*randn(n);
 
+Plots.scatter(x, y, xlabel = "x", ylabel = "y", title = "Data distribution")
+savefig("Data_Adam1DGMMP2Q1.png")
+
 # prior
 mu_pr = [2.0 3.0]';
 sigma2_pr = [1.0 1.0]';
@@ -135,9 +138,6 @@ function adam_optimization(z0, alpha=0.001, beta1=0.9, beta2=0.999, epsilon=1e-8
     p4 = Plots.plot(x_i, g_list, xlabel = "iterates", ylabel = "Log of Gradient of ELBO", title = "Log of Gradient of ELBO with Time")
     Plots.plot(p3, p4, layout=(1, 2), size=(1000, 400))
     savefig("ELBO_Adam1DGMMP2Q1.png")
-
-    Plots.scatter(x, y, xlabel = "x", ylabel = "y", title = "Data distribution")
-    savefig("Data_Adam1DGMMP2Q1.png")
 
     println("Reached maximum iterations")
     return z
