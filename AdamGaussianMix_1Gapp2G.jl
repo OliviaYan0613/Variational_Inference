@@ -16,7 +16,7 @@ weights = [0.5, 0.5]
 gmm = MixtureModel([g1, g2], weights)
 
 # Sample from the GMM
-n = 50
+n = 10
 samples = rand(gmm, n)
 
 # Define prior
