@@ -20,8 +20,8 @@ x = randn(n,1);
 
 y = x*beta_true + sqrt(noise)*randn(n);
 
-Plots.scatter(x, y, xlabel = "x", ylabel = "y", title = "Data distribution")
-savefig("Data_Adam1DGMMP2Q1.png")
+p1 = Plots.scatter(x, y, xlabel = "x", ylabel = "y", title = "Data distribution")
+
 
 # prior
 mu_pr = [2.0 3.0]';
@@ -130,7 +130,8 @@ function adam_optimization(z0, alpha=0.001, beta1=0.9, beta2=0.999, epsilon=1e-8
     # Evaluate the Gaussian density at each point in the grid
     Z = [pdf(Normal(mu_post, sigma2_post), xi) for xi in dx]
 
-    Plots.plot(dx, Z, xlabel="beta_1", ylabel="probability density", title="1D Gaussian Distribution Contour Map", fill=false, colorbar=true)
+    p2 = Plots.plot(dx, Z, xlabel="beta_1", ylabel="probability density", title="1D Gaussian Distribution Contour Map", fill=false, colorbar=true)
+    Plots.plot(p1, p2, layout=(1, 2), size=(1000, 400))
     savefig("Adam1DGMMP2Q1.png")
 
     x_i = 1:length(ELBO_list)
