@@ -24,8 +24,9 @@ y = x*beta_true + sqrt(noise)*randn(n);
 mu_pr = [2.0 3.0]';
 sigma2_pr = [1.0 1.0]';
 w_pr = [0.5 0.5]'
-#z0 = [mu_pr; sigma2_pr; w_pr]
-z0 = [2.0, 1.0]             #z0 = [mu_0, sigma2_0]
+
+# Start Point
+z0 = [2.0, 1.0]
 
 # p(y|beta)
 function p_y(beta)
