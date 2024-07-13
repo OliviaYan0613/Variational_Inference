@@ -2,10 +2,10 @@ using Printf, ForwardDiff, Distributions, Random, LinearAlgebra, Plots, Flux
 
 # setup
 #beta_true =  [3.0 2.0]';
-beta1_true = [3.0, 2.0]
-beta2_true = [2.5, 1.0]
-n = 10;
-w1,w2 = 0.5, 0.5
+beta1_true = [10.0, 10.0]
+beta2_true = [1.0, 1.0]
+n = 30;
+w1,w2 = 0.4, 0.6
 noise = 0.01;
 
 x = randn(n,2);
@@ -16,32 +16,37 @@ x = randn(n,2);
 
 y = zeros(n)
 c = rand(n)
+display(c')
+colors = Vector{Symbol}(undef, n)
 for i in 1:n
     if c[i]<= w1
         y[i] = [x[i,1], x[i,2]]'*beta1_true + sqrt(noise)*randn();
+        colors[i]=:red
     else
         y[i] = [x[i,1], x[i,2]]'*beta2_true + sqrt(noise)*randn();
+        colors[i]=:blue
     end
 end
+p1 = Plots.scatter3d(x[:,1],x[:,2], y, xlabel = "x_1", ylabel = "x_2", zlabel="y", title = "Data distribution",color=colors)
 
 # Start Point
-mu_pr = [2.0 3.0]';
-sigma2_pr = [2.0 0.5; 0.5 2.0];
+mu_pr = [10.0; 9.0];
+sigma2_pr = [10.0 0.5; 0.5 10.0];
 
 sigma2_pr_diag = [sigma2_pr[1,1] sigma2_pr[2,2]]';
 sigma2_pr_anti_diag = sigma2_pr[1,2]
 z0 = [mu_pr; sigma2_pr_diag; sigma2_pr_anti_diag];
 
 # prior
-mu1 = [3.0; 3.5]
-sigma2_1 = [1.0 0.5; 0.5 1.0];
-mu2 = [2.0; 3.0]
-sigma2_2 = [1.1 0.5; 0.5 1.5];
-weight = [0.3 0.7]                  # must sum to 1
+mu1 = [2.0; 3.0]
+sigma2_1 = [10.0 0.5; 0.5 10.0];
+mu2 = [2.0; 2.0]
+sigma2_2 = [10.0 0.5; 0.5 10.0];
+weight = [0.5 0.5]                  # must sum to 1
 
 # p(y|beta)
 function p_y(beta)
-    prob = exp(-0.5*((y - x*beta)'*(y - x*beta))[1]/noise)/(2*pi*sqrt(noise))^length(y)
+    prob = exp(-0.5*((y - x*beta)'*(y - x*beta))[1]/noise)/(2*pi*sqrt(noise))^n
     prob = max(prob[1],1e-300)
     return prob
 end
@@ -96,7 +101,7 @@ function G_ELBO(z)
 end
 
 # Adam Optimization
-function adam_optimization(z0, alpha=0.001, beta1=0.9, beta2=0.999, epsilon=1e-8, max_iter=5000, tol=0.1)
+function adam_optimization(z0, alpha=0.001, beta1=0.9, beta2=0.999, epsilon=1e-8, max_iter=10000, tol=0.1)
     z = z0
     m = zeros(length(z0))
     v = zeros(length(z0))
@@ -138,17 +143,26 @@ function adam_optimization(z0, alpha=0.001, beta1=0.9, beta2=0.999, epsilon=1e-8
     mu_post = vec(z[1:length(mu_pr)]);
     sigma2_post = z[length(mu_pr)+1:length(z)];
     Sigma2 = diagm(sigma2_post[1:2]);
-    Sigma2[1, 2] = sigma2_post[3];
+    Sigma2[1, 2] = sigma2_post[3]
     Sigma2[2, 1] = sigma2_post[3]
     # Create a grid of x and y values
-    dx = range(min(beta1_true[1],beta2_true[1])-0.3, stop=(max(beta1_true[1],beta2_true[1])+0.3), length=100)
-    dy = range(min(beta1_true[2],beta2_true[2])-0.3, stop=(max(beta1_true[2],beta2_true[2])+0.3), length=100)
-
+    dx = range(min(beta1_true[1],beta2_true[1])-3, stop=(max(beta1_true[1],beta2_true[1])+3), length=200)
+    dy = range(min(beta1_true[2],beta2_true[2])-3, stop=(max(beta1_true[2],beta2_true[2])+3), length=200)
+    
     # Evaluate the Gaussian density at each point in the grid
     Z = [pdf(MvNormal(mu_post, Sigma2), [xi, yi]) for xi in dx, yi in dy]
+    Z = (Z.-minimum(Z))./(maximum(Z)-minimum(Z))
     Z = reshape(Z, length(dx), length(dy))'
 
-    Plots.contour(dx, dy, Z, xlabel="beta_1", ylabel="beta_2", title="2D Gaussian Distribution Contour Map", fill=false, colorbar=true, ratio = 1.0)
+    S = [pdf(MvNormal(mu_pr, sigma2_pr), [xi, yi]) for xi in dx, yi in dy]
+    S = (S.-minimum(S))./(maximum(S)-minimum(S))
+    S = reshape(S, length(dx), length(dy))'
+
+    p2 = Plots.contour(dx, dy, S, xlabel="beta_1", ylabel="beta_2", title="2D Gaussian Distribution Contour Map", colorbar = false, c=:blues, ratio = 1.0)
+    Plots.contour!(dx, dy, Z, c=:reds)
+    Plots.scatter!([beta1_true[1],beta2_true[1]], [beta1_true[2],beta2_true[2]],color=:red, markersize=4, label="True Beta")
+    Plots.scatter!([mu_pr[1]],[mu_pr[2]],color=:blue, markersize=4, label="Start Point of mu")
+    Plots.plot(p1, p2, layout=(1, 2), size=(1000, 400))
     savefig("Adam2DGMMP2Q1.png")
 
     x_i = 1:length(ELBO_list)
@@ -158,7 +172,7 @@ function adam_optimization(z0, alpha=0.001, beta1=0.9, beta2=0.999, epsilon=1e-8
     savefig("ELBO_Adam2DGMMP2Q1.png.png")
 
     println("Reached maximum iterations")
-    return z
+    return z'
 end
 
 adam_optimization(z0)
